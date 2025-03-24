@@ -1,4 +1,4 @@
-name: Go Build & Release
+name: Go Build & Docker Build
 
 on:
   workflow_dispatch:
