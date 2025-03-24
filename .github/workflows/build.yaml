@@ -139,7 +139,7 @@ jobs:
     needs:
       - docker-build
 
-      if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request'
 
     permissions:
       contents: read
