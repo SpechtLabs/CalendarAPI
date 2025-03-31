@@ -1,0 +1,66 @@
+name: Documentation
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - main
+    paths:
+      - docs/**/*
+
+jobs:
+  build:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    runs-on: ubuntu-latest
+    name: Build (Docs)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Install Dependencies
+        run: cd docs && npm ci
+
+      - name: Build
+        run: cd docs && npm run build
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs
+          path: docs/.vuepress/dist
+
+  deploy-gh-pages:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push'
+
+    environment:
+      name: github-pages
+      url: https://calendarapi.specht-labs.de
+
+    steps:
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Download Artifacts for Website
+        uses: actions/download-artifact@v4
+        with:
+          name: docs
+          path: ./dist
+
+      - name: Upload to GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
