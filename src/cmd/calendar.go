@@ -9,7 +9,7 @@ import (
 	"github.com/SpechtLabs/CalendarAPI/pkg/api"
 	pb "github.com/SpechtLabs/CalendarAPI/pkg/protos"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 var outFormat string

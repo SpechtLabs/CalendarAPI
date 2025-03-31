@@ -81,6 +81,7 @@ func NewRestApiServer(zapLog *otelzap.Logger, client *client.ICalClient) *RestAp
 }
 
 func (e *RestApi) ListenAndServe() error {
+	e.zapLog.Info(fmt.Sprintf("REST API Server listening at %s", e.srv.Addr))
 	return e.srv.ListenAndServe()
 }
 
