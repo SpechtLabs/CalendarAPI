@@ -2,12 +2,19 @@ name: Go Build & Docker Build
 
 on:
   workflow_dispatch:
-  pull_request:
   push:
     branches:
       - main
     tags-ignore:
       - "*"
+    paths:
+      - src/**/*
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - main
+    paths:
+      - src/**/*
 
 permissions:
   contents: write
