@@ -49,6 +49,7 @@ jobs:
     if: github.event_name == 'push'
 
     permissions:
+      id-token: write
       pages: write
 
     environment:
