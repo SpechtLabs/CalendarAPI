@@ -1,51 +1,17 @@
-# Getting Started
-Welcome to Git-Tool, we hope you'll find it to be an awesome addition to your toolkit
-and that it'll bring you plenty of smiles. There are a few things you'll need to do
-to get yourself set up and working and these are covered in each of the **Getting
-Started** guides you'll find here.
+# Introduction
 
-::: tip
-This guide is the high-level run-through for anyone familiar with setting up Git-Tool
-or who likes guessing their way to a conclusion. If you run into trouble or want something
-more detailed, use the links in each **Step**.
-:::
+CalendarAPI was originally built to power an e-Paper-based meeting room display, running on an ESP32
+Since the device had limited memory and parsing iCal calendars in Arduino C would’ve been a major hassle, 
+CalendarAPI offloaded that complexity into a dedicated Go service that exposes the parsed calendar data 
+over both REST and gRPC APIs.
 
-#### Step #1: [Installation](installation.md)
-You can download the latest version of Git-Tool from our [GitHub releases][release] page.
-Pop it into your `$PATH` and you're good to go!
+While it started as a backend utility, CalendarAPI quickly proved useful beyond its original scope. 
+It became a handy CLI tool to check daily calendar events via `calendarapi get calendar`, 
+and even got a [HomeAssistant Add-On](https://github.com/SpechtLabs/homeassistant-addons/tree/main/calendar_api) for seamless integration into smart home setups. 
+With [RESTful sensors](https://www.home-assistant.io/integrations/sensor.rest/) and [RESTful commands](https://www.home-assistant.io/integrations/rest_command/), it can power HomeAssistant sensors or display contextual info on the e-Paper device.
 
-::: tip
-At this point, you'll be able to run `git-tool` to open repositories, create new ones,
-or manage your weekly scratchpads without any further configuration, however you'll
-probably want to continue through the remaining steps to get the most out of your setup.
-:::
+CalendarAPI also supports custom status messages per calendar, making it easy to show tailored messages on 
+displays throughout the day—whether it’s “In a meeting” or “Out for lunch.”
 
-#### Step #2: [Setup](../commands/setup.md)
-To get the most out of Git-Tool, you should run the setup wizard with `git-tool setup`.
-This wizard will guide you through the process of setting up your configuration file
-and shell autocompletion to ensure you get the most out of Git-Tool.
-
-#### Step #3: [Linking to GitHub](github.md)
-Git-Tool <3 GitHub and can automatically create repositories there whenever you run `gt new`.
-
-To set this up, generate a [new Personal Access Token](https://github.com/settings/tokens/new?scopes=repo)
-with the `repo` scope and run the following command to store it in your local keychain.
-
-```powershell
-gt auth gh
-```
-
-#### Bonus Step: [Updating Git-Tool](updates.md)
-We update Git-Tool regularly to patch bugs, add features and ensure that any potential
-security vulnerabilities in Git-Tool or its dependencies are closed as quickly as possible.
-
-You'll find our list of releases on [GitHub][release] and can subscribe there for notifications,
-but the quickest way to update is to run `gt update`.
-
-::: warning
-Due to the way Git-Tool runs and updates itself, you'll need to make sure that you close down any shells
-it has launched before running `gt update`.
-:::
-
-[release]: https://github.com/SierraSoftworks/git-tool/releases
-[new-issue]: https://github.com/SierraSoftworks/git-tool/issues/new/choose
+At its core, CalendarAPI exists to make calendar data more accessible, automatable, 
+and adaptable to embedded devices and home automation systems.

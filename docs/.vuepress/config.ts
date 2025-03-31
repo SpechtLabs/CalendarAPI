@@ -16,13 +16,13 @@ function fixPageHeader(header: PageHeader) {
 }
 
 export default defineUserConfig({
-  lang: 'en-GB',
+  lang: 'en-US',
   title: 'Calendar API',
   description: 'Easily access your calendars via gRPC or REST.',
 
   head: [
     ['meta', { name: "description", content: "CalendarAPI is a service that parses iCal files and exposes their content via gRPC or a REST API." }],
-    ['link', { rel: 'icon', href: '/specht-labs-rounted.png' }]
+    ['link', { rel: 'icon', href: '/favicon.ico' }]
   ],
 
   bundler: viteBundler(),
@@ -33,7 +33,7 @@ export default defineUserConfig({
   },
 
   theme: defaultTheme({
-    logo: '/specht-labs-rounded.png',
+    logo: '/logo.png',
 
     repo: "SpechtLabs/CalendarAPI",
     docsRepo: "SpechtLabs/CalendarAPI",
@@ -41,30 +41,20 @@ export default defineUserConfig({
     navbar: [
       {
         text: "Getting Started",
-        link: "/guide/",
-      },
-      {
-        text: "Commands",
-        link: "/commands/",
+        link: "/guide/README.md",
         children: [
-          '/commands/README.md',
-          '/commands/repos.md',
-          '/commands/scratch.md',
-          '/commands/dev.md',
-          '/commands/config.md',
-          '/commands/setup.md',
+            'guide/README.md',
+            'guide/commands.md',
+            'guide/home_assistant.md'
         ]
       },
       {
         text: "Configuration",
-        link: "/config/",
+        link: '/config/',
         children: [
-          '/config/README.md',
-          '/config/apps.md',
-          '/config/services.md',
-          '/config/features.md',
-          '/config/registry.md',
-          '/config/templates.md'
+          '/config/calendars.md',
+          '/config/server.md',
+          '/config/rules.md',
         ]
       },
       {
@@ -80,47 +70,26 @@ export default defineUserConfig({
     ],
 
     sidebar: {
+      '/config/': [
+        {
+          text: "Configuration",
+          children: [
+            '/config/calendars.md',
+            '/config/server.md',
+            '/config/rules.md',
+          ]
+        }
+      ],
       '/guide/': [
         {
           text: "Getting Started",
           children: [
             '/guide/README.md',
-            '/guide/installation.md',
-            '/guide/usage.md',
-            '/guide/github.md',
-            '/guide/updates.md',
-            '/guide/migrating-v3.md',
-            '/guide/reporting-errors.md',
-            '/guide/faq.md'
-          ]
+            '/guide/commands.md',
+            '/guide/home_assistant.md'
+          ],
         }
       ],
-      '/commands/': [
-        {
-          text: "Commands",
-          children: [
-            '/commands/README.md',
-            '/commands/repos.md',
-            '/commands/scratch.md',
-            '/commands/dev.md',
-            '/commands/config.md',
-            '/commands/setup.md',
-          ]
-        }
-      ],
-      '/config/': [
-        {
-          text: "Configuration",
-          children: [
-            '/config/README.md',
-            '/config/apps.md',
-            '/config/services.md',
-            '/config/features.md',
-            '/config/registry.md',
-            '/config/templates.md'
-          ]
-        }
-      ]
     }
   }),
 

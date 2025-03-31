@@ -50,11 +50,11 @@ interface ReleaseAsset {
 }
 
 const platforms = {
-  "darwin-amd64": "MacOS (Intel)",
-  "darwin-arm64": "MacOS (Apple)",
-  "linux-amd64": "Linux (x64)",
-  "linux-arm64": "Linux (ARM64)",
-  "windows-amd64": "Windows (x64)",
+  "darwin_amd64": "MacOS (Intel)",
+  "darwin_arm64": "MacOS (Apple)",
+  "linux_amd64": "Linux (x64)",
+  "linux_arm64": "Linux (ARM64)",
+  "windows_amd64": "Windows (x64)",
 };
 
 function getReleaseAsset(

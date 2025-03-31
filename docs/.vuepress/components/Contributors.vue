@@ -2,11 +2,6 @@
     <div v-if="hasContributors">
         <h2>Contributors</h2>
 
-        <p>
-            Thank you to everyone who has contributed to turning Git-Tool into the awesome piece of software you find here. If your name is missing
-            from the list, please open an issue and we'll try to get it resolved as soon as possible.
-        </p>
-
         <div class="contributors-list">
             <div class="contributor" v-for="contributor in contributors" :key="contributor.login">
                 <img class="contributor__avatar" :src="contributor.avatar_url" :alt="'The avatar used by ' + contributor.login" width="80" height="80">
