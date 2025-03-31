@@ -6,5 +6,5 @@
 .DS_Store
 **/.DS_Store
 .trunk
-dist/
+src/dist/
 .idea/
