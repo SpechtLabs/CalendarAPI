@@ -29,6 +29,7 @@ jobs:
         with:
           go-version-file: 'src/go.mod'
           cache-dependency-path: "**/*.sum"
+          cache: true
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
