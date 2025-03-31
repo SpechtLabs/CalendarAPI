@@ -9,12 +9,14 @@ on:
       - "*"
     paths:
       - src/**/*
+      - .github/workflows/**
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
       - main
     paths:
       - src/**/*
+      - .github/workflows/**
 
 permissions:
   contents: write
