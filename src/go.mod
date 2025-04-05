@@ -4,7 +4,7 @@ go 1.24
 
 require (
 	github.com/apognu/gocal v0.9.1
-	github.com/fsnotify/fsnotify v1.8.0
+	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gin-contrib/zap v1.1.5
 	github.com/gin-gonic/gin v1.10.0
 	github.com/mcuadros/go-gin-prometheus v0.1.0
