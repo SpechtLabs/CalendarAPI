@@ -14,8 +14,8 @@ import (
 
 	"github.com/SpechtLabs/CalendarAPI/pkg/errors"
 	"github.com/apognu/gocal"
+	"github.com/spechtlabs/go-otel-utils/otelzap"
 	"github.com/spf13/viper"
-	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 
 	pb "github.com/SpechtLabs/CalendarAPI/pkg/protos"
 )
@@ -24,7 +24,6 @@ type ICalClient struct {
 	cacheMux        sync.RWMutex
 	cache           *pb.CalendarResponse
 	cacheExpiration time.Time
-	zapLog          *otelzap.Logger
 
 	statusMux    sync.RWMutex
 	CustomStatus map[string]*pb.CustomStatus // custom status is a map from calendar-name to status
@@ -70,9 +69,8 @@ func parseCalendars() []Calendar {
 	return calendars
 }
 
-func NewICalClient(zapLog *otelzap.Logger) *ICalClient {
+func NewICalClient() *ICalClient {
 	return &ICalClient{
-		zapLog:          zapLog,
 		cacheExpiration: time.Now(),
 		cache:           &pb.CalendarResponse{LastUpdated: time.Now().Unix()},
 		CustomStatus:    make(map[string]*pb.CustomStatus),
@@ -103,7 +101,7 @@ func (e *ICalClient) FetchEvents(ctx context.Context) {
 			events, err := e.loadEvents(ctx, name, from, url, rules)
 			stop := time.Now()
 			if err != nil {
-				e.zapLog.Ctx(ctx).Sugar().Errorw("Unable to load events", err.AsZapLogKV())
+				otelzap.L().Ctx(ctx).Sugar().Errorw("Unable to load events", err.AsZapLogKV())
 			}
 
 			eventsMux.Lock()
@@ -111,7 +109,7 @@ func (e *ICalClient) FetchEvents(ctx context.Context) {
 			response.Entries = append(response.Entries, events...)
 			eventsMux.Unlock()
 
-			e.zapLog.Ctx(ctx).Sugar().Infof("Refreshed calendar %s in %dms", name, stop.Sub(start).Milliseconds())
+			otelzap.L().Ctx(ctx).Sugar().Infof("Refreshed calendar %s in %dms", name, stop.Sub(start).Milliseconds())
 
 			wg.Done()
 		}()
@@ -125,7 +123,7 @@ func (e *ICalClient) FetchEvents(ctx context.Context) {
 
 func (e *ICalClient) GetEvents(ctx context.Context) *pb.CalendarResponse {
 	if e.cache == nil {
-		e.zapLog.Ctx(ctx).Sugar().Infow("Experiencing cold. Fetching events now!")
+		otelzap.L().Ctx(ctx).Sugar().Infow("Experiencing cold. Fetching events now!")
 		e.FetchEvents(ctx)
 	}
 
@@ -136,7 +134,7 @@ func (e *ICalClient) GetEvents(ctx context.Context) *pb.CalendarResponse {
 
 func (e *ICalClient) GetCurrentEvent(ctx context.Context, calendar string) *pb.CalendarEntry {
 	if e.cache == nil {
-		e.zapLog.Ctx(ctx).Sugar().Infow("Experiencing cold. Fetching events now!")
+		otelzap.L().Ctx(ctx).Sugar().Infow("Experiencing cold. Fetching events now!")
 		e.FetchEvents(ctx)
 	}
 
@@ -238,7 +236,7 @@ func (e *ICalClient) loadEvents(ctx context.Context, calName string, from string
 		// let's evaluate our rules
 		for _, rule := range rules {
 			// if a rule is sucessfully evaluated
-			if ok, skip := rule.Evaluate(event, e.zapLog); ok {
+			if ok, skip := rule.Evaluate(event); ok {
 				// if this is a skip rule, don't process any other rules for this
 				// event and don't add it
 				if skip {

@@ -5,11 +5,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/uptrace/opentelemetry-go-extra/otelzap"
-	"go.uber.org/zap"
 )
 
 var (
@@ -32,34 +29,6 @@ var (
 	configFileName         string
 	debug                  bool
 )
-
-func initTelemetry() (func(), *zap.Logger, *otelzap.Logger) {
-	var err error
-
-	// Initialize Logging
-	var zapLog *zap.Logger
-	if debug {
-		zapLog, err = zap.NewDevelopment()
-		gin.SetMode(gin.DebugMode)
-	} else {
-		zapLog, err = zap.NewProduction()
-		gin.SetMode(gin.ReleaseMode)
-	}
-
-	if err != nil {
-		panic(fmt.Errorf("failed to initialize logger: %w", err))
-	}
-
-	otelZap := otelzap.New(zapLog,
-		otelzap.WithCaller(true),
-		otelzap.WithErrorStatusLevel(zap.ErrorLevel),
-		otelzap.WithStackTrace(false),
-	)
-
-	undo := otelzap.ReplaceGlobals(otelZap)
-
-	return undo, zapLog, otelZap
-}
 
 func init() {
 	cobra.OnInitialize(initConfig)

@@ -11,17 +11,16 @@ import (
 	"github.com/SpechtLabs/CalendarAPI/pkg/api"
 	"github.com/SpechtLabs/CalendarAPI/pkg/client"
 	"github.com/fsnotify/fsnotify"
+	"github.com/spechtlabs/go-otel-utils/otelzap"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/uptrace/opentelemetry-go-extra/otelzap"
-	"go.uber.org/zap"
 )
 
-func initCalendarRefresh(zapLog *otelzap.Logger, iCalClient *client.ICalClient) chan struct{} {
+func initCalendarRefresh(iCalClient *client.ICalClient) chan struct{} {
 	refreshConfig := viper.GetString("server.refresh")
 	refresh, err := time.ParseDuration(refreshConfig)
 	if err != nil {
-		zapLog.Sugar().Errorf("Failed to parse '%s' as time.Duration: %v. Failing back to default refresh duration (%s)",
+		otelzap.L().Sugar().Errorf("Failed to parse '%s' as time.Duration: %v. Failing back to default refresh duration (%s)",
 			refreshConfig, err.Error(),
 			defaultCalendarRefresh,
 		)
@@ -48,24 +47,19 @@ func initCalendarRefresh(zapLog *otelzap.Logger, iCalClient *client.ICalClient) 
 	return quitRefreshTicker
 }
 
-func viperConfigChange(undo func(), zapLog *zap.Logger, otelZap *otelzap.Logger, iCalClient *client.ICalClient, quitRefreshTicker *chan struct{}) {
+func viperConfigChange(iCalClient *client.ICalClient, quitRefreshTicker *chan struct{}) {
 	viper.OnConfigChange(func(e fsnotify.Event) {
 		otelzap.L().Sugar().Infow("Config file change detected. Reloading.", "filename", e.Name)
 		iCalClient.FetchEvents(context.Background())
 
-		// refresh logger
-		zapLog.Sync()
-		undo()
-		undo, zapLog, otelZap = initTelemetry()
-
 		// Refresh calendar watch timer
 		close(*quitRefreshTicker)
-		*quitRefreshTicker = initCalendarRefresh(otelZap, iCalClient)
+		*quitRefreshTicker = initCalendarRefresh(iCalClient)
 
 		if hostname != viper.GetString("server.host") ||
 			grpcPort != viper.GetInt("server.grpcPort") ||
 			restPort != viper.GetInt("server.httpPort") {
-			zapLog.Sugar().Errorw("Unable to change host or port at runtime!",
+			otelzap.L().Sugar().Errorw("Unable to change host or port at runtime!",
 				"new_host", viper.GetString("server.host"),
 				"old_host", hostname,
 				"new_grpcPort", viper.GetInt("server.grpcPort"),
@@ -83,27 +77,23 @@ var serveCmd = &cobra.Command{
 	Example: "meetingepd version",
 	Args:    cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		undo, zapLog, otelZap := initTelemetry()
-		defer zapLog.Sync()
-		defer undo()
-
 		if debug {
 			file, err := os.ReadFile(viper.GetViper().ConfigFileUsed())
 			if err != nil {
 				panic(fmt.Errorf("fatal error reading config file: %w", err))
 			}
-			zapLog.Sugar().With("config_file", string(file)).Debug("Config file used")
+			otelzap.L().Sugar().With("config_file", string(file)).Debug("Config file used")
 		}
 
-		iCalClient := client.NewICalClient(otelZap)
+		iCalClient := client.NewICalClient()
 
-		quitRefreshTicker := initCalendarRefresh(otelZap, iCalClient)
-		viperConfigChange(undo, zapLog, otelZap, iCalClient, &quitRefreshTicker)
+		quitRefreshTicker := initCalendarRefresh(iCalClient)
+		viperConfigChange(iCalClient, &quitRefreshTicker)
 		viper.WatchConfig()
 
 		// Serve Rest-API
 		go func() {
-			restApiServer := api.NewRestApiServer(otelZap, iCalClient)
+			restApiServer := api.NewRestApiServer(iCalClient)
 			if err := restApiServer.ListenAndServe(); err != nil {
 				panic(err.Error())
 			}
@@ -111,7 +101,7 @@ var serveCmd = &cobra.Command{
 
 		// Serve gRPC-API
 		go func() {
-			gRpcApiServer := api.NewGrpcApiServer(otelZap, iCalClient)
+			gRpcApiServer := api.NewGrpcApiServer(iCalClient)
 			if err := gRpcApiServer.Serve(); err != nil {
 				panic(err.Error())
 			}

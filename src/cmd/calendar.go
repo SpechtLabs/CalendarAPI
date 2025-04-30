@@ -8,6 +8,7 @@ import (
 
 	"github.com/SpechtLabs/CalendarAPI/pkg/api"
 	pb "github.com/SpechtLabs/CalendarAPI/pkg/protos"
+	"github.com/spechtlabs/go-otel-utils/otelzap"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -20,13 +21,9 @@ var clearCalendarCmd = &cobra.Command{
 	Long:    "Clear the cache of the server and force it to fetch the latest info from the iCal",
 	Args:    cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		undo, zapLog, otelZap := initTelemetry()
-		defer zapLog.Sync()
-		defer undo()
-
 		addr := fmt.Sprintf("%s:%d", hostname, grpcPort)
 
-		conn, client := api.NewGrpcApiClient(otelZap, addr)
+		conn, client := api.NewGrpcApiClient(addr)
 		defer conn.Close()
 
 		// Contact the server
@@ -35,7 +32,7 @@ var clearCalendarCmd = &cobra.Command{
 
 		_, err := client.RefreshCalendar(ctx, &pb.CalendarRequest{CalendarName: "all"})
 		if err != nil {
-			zapLog.Fatal(fmt.Sprintf("Failed to talk to gRPC API (%s) %v", addr, err))
+			otelzap.L().Fatal(fmt.Sprintf("Failed to talk to gRPC API (%s) %v", addr, err))
 		}
 
 		fmt.Print("Cleared calendar cache\n")
@@ -47,10 +44,6 @@ var getCalendarCmd = &cobra.Command{
 	Example: "meetingepd get calendar",
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		undo, zapLog, otelZap := initTelemetry()
-		defer zapLog.Sync()
-		defer undo()
-
 		calendarName := "all"
 		if len(args) == 1 {
 			calendarName = args[0]
@@ -58,7 +51,7 @@ var getCalendarCmd = &cobra.Command{
 
 		addr := fmt.Sprintf("%s:%d", hostname, grpcPort)
 
-		conn, client := api.NewGrpcApiClient(otelZap, addr)
+		conn, client := api.NewGrpcApiClient(addr)
 		defer conn.Close()
 
 		// Contact the server
@@ -67,21 +60,21 @@ var getCalendarCmd = &cobra.Command{
 
 		calendar, err := client.GetCalendar(ctx, &pb.CalendarRequest{CalendarName: calendarName})
 		if err != nil {
-			zapLog.Fatal(fmt.Sprintf("Failed to talk to gRPC API (%s) %v", addr, err))
+			otelzap.L().Fatal(fmt.Sprintf("Failed to talk to gRPC API (%s) %v", addr, err))
 		}
 
 		switch outFormat {
 		case "json":
 			json, err := json.Marshal(calendar)
 			if err != nil {
-				zapLog.Sugar().Error(err)
+				otelzap.L().Sugar().Error(err)
 			}
 			fmt.Println(string(json))
 
 		case "yaml":
 			yaml, err := yaml.Marshal(calendar)
 			if err != nil {
-				zapLog.Sugar().Error(err)
+				otelzap.L().Sugar().Error(err)
 			}
 			fmt.Println(string(yaml))
 

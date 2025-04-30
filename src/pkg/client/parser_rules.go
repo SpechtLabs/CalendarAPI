@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/spechtlabs/go-otel-utils/otelzap"
 	"github.com/spf13/viper"
-	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 
 	pb "github.com/SpechtLabs/CalendarAPI/pkg/protos"
 )
@@ -25,7 +25,7 @@ type Rule struct {
 // where the first bool indicates if the rule was applied to this pb.CalendarEntry
 // and the second bool indicates if this is a skip rule and the pb.CalendarEntry
 // should be skipped
-func (r *Rule) Evaluate(e *pb.CalendarEntry, zapLog *otelzap.Logger) (bool, bool) {
+func (r *Rule) Evaluate(e *pb.CalendarEntry) (bool, bool) {
 	var matchFieldValue string
 	var matchFieldContains string
 	match := false
@@ -80,7 +80,7 @@ func (r *Rule) Evaluate(e *pb.CalendarEntry, zapLog *otelzap.Logger) (bool, bool
 		e.Important = r.Important
 	}
 
-	zapLog.Sugar().Debugw("Rule Evaluated", "rule_name", r.Name, "calendar_name", r.CalendarName, "title", e.Title, "key", r.Key, "Field", matchFieldValue, "contains", matchFieldContains, "skip", r.Skip, "relabel_important", e.Important, "relabel_message", e.Message)
+	otelzap.L().Sugar().Debugw("Rule Evaluated", "rule_name", r.Name, "calendar_name", r.CalendarName, "title", e.Title, "key", r.Key, "Field", matchFieldValue, "contains", matchFieldContains, "skip", r.Skip, "relabel_important", e.Important, "relabel_message", e.Message)
 
 	return true, r.Skip
 }

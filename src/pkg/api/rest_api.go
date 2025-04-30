@@ -10,8 +10,8 @@ import (
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	ginprometheus "github.com/mcuadros/go-gin-prometheus"
+	"github.com/spechtlabs/go-otel-utils/otelzap"
 	"github.com/spf13/viper"
-	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
@@ -24,13 +24,11 @@ import (
 
 type RestApi struct {
 	client *client.ICalClient
-	zapLog *otelzap.Logger
 	srv    *http.Server
 }
 
-func NewRestApiServer(zapLog *otelzap.Logger, client *client.ICalClient) *RestApi {
+func NewRestApiServer(client *client.ICalClient) *RestApi {
 	e := &RestApi{
-		zapLog: zapLog,
 		client: client,
 	}
 
@@ -41,7 +39,7 @@ func NewRestApiServer(zapLog *otelzap.Logger, client *client.ICalClient) *RestAp
 	router.Use(otelgin.Middleware("conf_room_display"))
 
 	// Setup ginzap to log everything correctly to zap
-	router.Use(ginzap.GinzapWithConfig(zapLog, &ginzap.Config{
+	router.Use(ginzap.GinzapWithConfig(otelzap.L(), &ginzap.Config{
 		UTC:        true,
 		TimeFormat: time.RFC3339,
 		Context: ginzap.Fn(func(c *gin.Context) []zapcore.Field {
@@ -81,7 +79,7 @@ func NewRestApiServer(zapLog *otelzap.Logger, client *client.ICalClient) *RestAp
 }
 
 func (e *RestApi) ListenAndServe() error {
-	e.zapLog.Info(fmt.Sprintf("REST API Server listening at %s", e.srv.Addr))
+	otelzap.L().Info(fmt.Sprintf("REST API Server listening at %s", e.srv.Addr))
 	return e.srv.ListenAndServe()
 }
 

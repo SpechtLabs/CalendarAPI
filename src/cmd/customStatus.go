@@ -7,6 +7,7 @@ import (
 
 	"github.com/SpechtLabs/CalendarAPI/pkg/api"
 	pb "github.com/SpechtLabs/CalendarAPI/pkg/protos"
+	"github.com/spechtlabs/go-otel-utils/otelzap"
 	"github.com/spf13/cobra"
 )
 
@@ -22,13 +23,9 @@ var getCustomStatusCmd = &cobra.Command{
 	Example: "meetingepd get status",
 	Args:    cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		undo, zapLog, otelZap := initTelemetry()
-		defer zapLog.Sync()
-		defer undo()
-
 		addr := fmt.Sprintf("%s:%d", hostname, grpcPort)
 
-		conn, client := api.NewGrpcApiClient(otelZap, addr)
+		conn, client := api.NewGrpcApiClient(addr)
 		defer conn.Close()
 
 		// Contact the server
@@ -37,7 +34,7 @@ var getCustomStatusCmd = &cobra.Command{
 
 		customStatus, err := client.GetCustomStatus(ctx, &pb.GetCustomStatusRequest{CalendarName: calendar})
 		if err != nil {
-			zapLog.Fatal(fmt.Sprintf("Failed to talk to gRPC API (%s) %v", addr, err))
+			otelzap.L().Fatal(fmt.Sprintf("Failed to talk to gRPC API (%s) %v", addr, err))
 		}
 
 		fmt.Print("Custom Status:")
@@ -57,13 +54,9 @@ var setCustomStatusCmd = &cobra.Command{
 	Example: "meetingepd set status",
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		undo, zapLog, otelZap := initTelemetry()
-		defer zapLog.Sync()
-		defer undo()
-
 		addr := fmt.Sprintf("%s:%d", hostname, grpcPort)
 
-		conn, client := api.NewGrpcApiClient(otelZap, addr)
+		conn, client := api.NewGrpcApiClient(addr)
 		defer conn.Close()
 
 		// Contact the server
@@ -80,7 +73,7 @@ var setCustomStatusCmd = &cobra.Command{
 			},
 		})
 		if err != nil {
-			zapLog.Fatal(fmt.Sprintf("Failed to talk to gRPC API (%s) %v", addr, err))
+			otelzap.L().Fatal(fmt.Sprintf("Failed to talk to gRPC API (%s) %v", addr, err))
 		}
 
 		fmt.Print("Set Custom Status:")
@@ -100,13 +93,9 @@ var clearCustomStatusCmd = &cobra.Command{
 	Example: "meetingepd clear status",
 	Args:    cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		undo, zapLog, otelZap := initTelemetry()
-		defer zapLog.Sync()
-		defer undo()
-
 		addr := fmt.Sprintf("%s:%d", hostname, grpcPort)
 
-		conn, client := api.NewGrpcApiClient(otelZap, addr)
+		conn, client := api.NewGrpcApiClient(addr)
 		defer conn.Close()
 
 		// Contact the server
@@ -115,7 +104,7 @@ var clearCustomStatusCmd = &cobra.Command{
 
 		_, err := client.ClearCustomStatus(ctx, &pb.ClearCustomStatusRequest{CalendarName: calendar})
 		if err != nil {
-			zapLog.Fatal(fmt.Sprintf("Failed to talk to gRPC API (%s) %v", addr, err))
+			otelzap.L().Fatal(fmt.Sprintf("Failed to talk to gRPC API (%s) %v", addr, err))
 		}
 
 		fmt.Print("Cleared Custom Status\n")
