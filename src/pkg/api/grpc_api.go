@@ -7,6 +7,7 @@ import (
 
 	"github.com/spechtlabs/go-otel-utils/otelzap"
 	"github.com/spf13/viper"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -23,9 +24,14 @@ type GrpcApi struct {
 }
 
 func NewGrpcApiServer(client *client.ICalClient) *GrpcApi {
+	// Create a server with the OpenTelemetry interceptor
+	srv := grpc.NewServer(
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
+	)
+
 	e := &GrpcApi{
 		client: client,
-		srv:    grpc.NewServer(),
+		srv:    srv,
 	}
 
 	pb.RegisterCalenderServiceServer(e.srv, e)
@@ -42,9 +48,13 @@ func NewGrpcApiServer(client *client.ICalClient) *GrpcApi {
 }
 
 func NewGrpcApiClient(addr string) (*grpc.ClientConn, pb.CalenderServiceClient) {
+	// Set up a connection to the server with OpenTelemetry instrumentation
+	conn, err := grpc.NewClient(
+		addr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+	)
 
-	// Set up a connection to the server.
-	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		otelzap.L().Fatal(fmt.Sprintf("gRPC API: failed to connect: %v", err))
 	}

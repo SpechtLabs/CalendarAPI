@@ -16,6 +16,10 @@ import (
 	"github.com/apognu/gocal"
 	"github.com/spechtlabs/go-otel-utils/otelzap"
 	"github.com/spf13/viper"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
 	pb "github.com/SpechtLabs/CalendarAPI/pkg/protos"
@@ -25,6 +29,7 @@ type ICalClient struct {
 	cacheMux        sync.RWMutex
 	cache           *pb.CalendarResponse
 	cacheExpiration time.Time
+	tracer          trace.Tracer
 
 	statusMux    sync.RWMutex
 	CustomStatus map[string]*pb.CustomStatus // custom status is a map from calendar-name to status
@@ -79,10 +84,14 @@ func NewICalClient() *ICalClient {
 		cacheExpiration: time.Now(),
 		cache:           &pb.CalendarResponse{LastUpdated: time.Now().Unix()},
 		CustomStatus:    make(map[string]*pb.CustomStatus),
+		tracer:          otel.GetTracerProvider().Tracer("github.com/SpechtLabs/CalendarAPI/pkg/client"),
 	}
 }
 
 func (e *ICalClient) FetchEvents(ctx context.Context) {
+	ctx, span := e.tracer.Start(ctx, "ICalClient.FetchEvents")
+	defer span.End()
+
 	response := &pb.CalendarResponse{
 		LastUpdated: time.Now().Unix(),
 		Entries:     make([]*pb.CalendarEntry, 0),
@@ -127,6 +136,9 @@ func (e *ICalClient) FetchEvents(ctx context.Context) {
 }
 
 func (e *ICalClient) GetEvents(ctx context.Context) *pb.CalendarResponse {
+	ctx, span := e.tracer.Start(ctx, "ICalClient.GetEvents")
+	defer span.End()
+
 	if e.cache == nil {
 		otelzap.L().Ctx(ctx).Sugar().Infow("Experiencing cold. Fetching events now!")
 		e.FetchEvents(ctx)
@@ -138,6 +150,9 @@ func (e *ICalClient) GetEvents(ctx context.Context) *pb.CalendarResponse {
 }
 
 func (e *ICalClient) GetCurrentEvent(ctx context.Context, calendar string) *pb.CalendarEntry {
+	ctx, span := e.tracer.Start(ctx, "ICalClient.GetCurrentEvent")
+	defer span.End()
+
 	if e.cache == nil {
 		otelzap.L().Ctx(ctx).Sugar().Infow("Experiencing cold. Fetching events now!")
 		e.FetchEvents(ctx)
@@ -186,7 +201,10 @@ func (e *ICalClient) GetCurrentEvent(ctx context.Context, calendar string) *pb.C
 	return closest
 }
 
-func (e *ICalClient) GetCustomStatus(_ context.Context, req *pb.GetCustomStatusRequest) *pb.CustomStatus {
+func (e *ICalClient) GetCustomStatus(ctx context.Context, req *pb.GetCustomStatusRequest) *pb.CustomStatus {
+	ctx, span := e.tracer.Start(ctx, "ICalClient.GetCustomStatus")
+	defer span.End()
+
 	e.statusMux.RLock()
 	defer e.statusMux.RUnlock()
 
@@ -197,7 +215,10 @@ func (e *ICalClient) GetCustomStatus(_ context.Context, req *pb.GetCustomStatusR
 	return &pb.CustomStatus{}
 }
 
-func (e *ICalClient) SetCustomStatus(_ context.Context, req *pb.SetCustomStatusRequest) {
+func (e *ICalClient) SetCustomStatus(ctx context.Context, req *pb.SetCustomStatusRequest) {
+	ctx, span := e.tracer.Start(ctx, "ICalClient.SetCustomStatus")
+	defer span.End()
+
 	e.statusMux.Lock()
 	defer e.statusMux.Unlock()
 
@@ -205,6 +226,15 @@ func (e *ICalClient) SetCustomStatus(_ context.Context, req *pb.SetCustomStatusR
 }
 
 func (e *ICalClient) loadEvents(ctx context.Context, calName string, from string, url string, rules []Rule) ([]*pb.CalendarEntry, *errors.ResolvingError) {
+	ctx, span := e.tracer.Start(ctx, "ICalClient.loadEvents")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("calendar.name", calName),
+		attribute.String("calendar.from", from),
+		attribute.String("calendar.url", url),
+	)
+
 	ical, err := e.getIcal(ctx, from, url)
 	if ical == nil || err != nil {
 		return nil, errors.Wrap(err, fmt.Errorf("failed to load iCal calendar file"), "")
@@ -328,14 +358,25 @@ func (e *ICalClient) getIcalFromFile(path string) (io.ReadCloser, *errors.Resolv
 }
 
 func (e *ICalClient) getIcalFromURL(ctx context.Context, url string) (io.ReadCloser, *errors.ResolvingError) {
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	ctx, span := e.tracer.Start(ctx, "ICalClient.getIcalFromURL")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("http.method", http.MethodGet),
+	)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, errors.NewResolvingError(fmt.Errorf("failed creating request for %s: %w", url, err), "")
 	}
 
 	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, errors.NewResolvingError(fmt.Errorf("failed making request to %s: %w", url, err), "verify if URL exists and is accessible")
 	}
 
