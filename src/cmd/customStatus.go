@@ -7,7 +7,10 @@ import (
 
 	"github.com/SpechtLabs/CalendarAPI/pkg/api"
 	pb "github.com/SpechtLabs/CalendarAPI/pkg/protos"
+	"github.com/spechtlabs/go-otel-utils/otelzap"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 var (
@@ -22,14 +25,15 @@ var getCustomStatusCmd = &cobra.Command{
 	Example: "meetingepd get status",
 	Args:    cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		undo, zapLog, otelZap := initTelemetry()
-		defer zapLog.Sync()
-		defer undo()
-
 		addr := fmt.Sprintf("%s:%d", hostname, grpcPort)
 
-		conn, client := api.NewGrpcApiClient(otelZap, addr)
-		defer conn.Close()
+		conn, client := api.NewGrpcApiClient(addr)
+		defer func(conn *grpc.ClientConn) {
+			err := conn.Close()
+			if err != nil {
+				otelzap.L().Sugar().Errorw("failed to close gRPC connection", zap.Error(err))
+			}
+		}(conn)
 
 		// Contact the server
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -37,7 +41,7 @@ var getCustomStatusCmd = &cobra.Command{
 
 		customStatus, err := client.GetCustomStatus(ctx, &pb.GetCustomStatusRequest{CalendarName: calendar})
 		if err != nil {
-			zapLog.Fatal(fmt.Sprintf("Failed to talk to gRPC API (%s) %v", addr, err))
+			otelzap.L().Fatal(fmt.Sprintf("Failed to talk to gRPC API (%s) %v", addr, err))
 		}
 
 		fmt.Print("Custom Status:")
@@ -57,14 +61,15 @@ var setCustomStatusCmd = &cobra.Command{
 	Example: "meetingepd set status",
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		undo, zapLog, otelZap := initTelemetry()
-		defer zapLog.Sync()
-		defer undo()
-
 		addr := fmt.Sprintf("%s:%d", hostname, grpcPort)
 
-		conn, client := api.NewGrpcApiClient(otelZap, addr)
-		defer conn.Close()
+		conn, client := api.NewGrpcApiClient(addr)
+		defer func(conn *grpc.ClientConn) {
+			err := conn.Close()
+			if err != nil {
+				otelzap.L().Sugar().Errorw("failed to close gRPC connection", zap.Error(err))
+			}
+		}(conn)
 
 		// Contact the server
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -80,7 +85,7 @@ var setCustomStatusCmd = &cobra.Command{
 			},
 		})
 		if err != nil {
-			zapLog.Fatal(fmt.Sprintf("Failed to talk to gRPC API (%s) %v", addr, err))
+			otelzap.L().Fatal(fmt.Sprintf("Failed to talk to gRPC API (%s) %v", addr, err))
 		}
 
 		fmt.Print("Set Custom Status:")
@@ -100,14 +105,15 @@ var clearCustomStatusCmd = &cobra.Command{
 	Example: "meetingepd clear status",
 	Args:    cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		undo, zapLog, otelZap := initTelemetry()
-		defer zapLog.Sync()
-		defer undo()
-
 		addr := fmt.Sprintf("%s:%d", hostname, grpcPort)
 
-		conn, client := api.NewGrpcApiClient(otelZap, addr)
-		defer conn.Close()
+		conn, client := api.NewGrpcApiClient(addr)
+		defer func(conn *grpc.ClientConn) {
+			err := conn.Close()
+			if err != nil {
+				otelzap.L().Sugar().Errorw("failed to close gRPC connection", zap.Error(err))
+			}
+		}(conn)
 
 		// Contact the server
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -115,7 +121,7 @@ var clearCustomStatusCmd = &cobra.Command{
 
 		_, err := client.ClearCustomStatus(ctx, &pb.ClearCustomStatusRequest{CalendarName: calendar})
 		if err != nil {
-			zapLog.Fatal(fmt.Sprintf("Failed to talk to gRPC API (%s) %v", addr, err))
+			otelzap.L().Fatal(fmt.Sprintf("Failed to talk to gRPC API (%s) %v", addr, err))
 		}
 
 		fmt.Print("Cleared Custom Status\n")
@@ -128,13 +134,13 @@ func init() {
 	setCustomStatusCmd.Flags().Int32Var(&iconSize, "icon_size", 196, "Icon size to display in the custom status")
 
 	setCustomStatusCmd.Flags().StringVarP(&calendar, "calendar", "q", "", "Name of the calendar to set the custom status for")
-	setCustomStatusCmd.MarkFlagRequired("calendar")
+	_ = setCustomStatusCmd.MarkFlagRequired("calendar")
 
 	getCustomStatusCmd.Flags().StringVarP(&calendar, "calendar", "q", "", "Name of the calendar to set the custom status for")
-	getCustomStatusCmd.MarkFlagRequired("calendar")
+	_ = getCustomStatusCmd.MarkFlagRequired("calendar")
 
 	clearCustomStatusCmd.Flags().StringVarP(&calendar, "calendar", "q", "", "Name of the calendar to set the custom status for")
-	clearCustomStatusCmd.MarkFlagRequired("calendar")
+	_ = clearCustomStatusCmd.MarkFlagRequired("calendar")
 
 	setCmd.AddCommand(setCustomStatusCmd)
 	getCmd.AddCommand(getCustomStatusCmd)

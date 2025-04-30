@@ -10,8 +10,8 @@ import (
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	ginprometheus "github.com/mcuadros/go-gin-prometheus"
+	"github.com/spechtlabs/go-otel-utils/otelzap"
 	"github.com/spf13/viper"
-	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
@@ -24,13 +24,11 @@ import (
 
 type RestApi struct {
 	client *client.ICalClient
-	zapLog *otelzap.Logger
 	srv    *http.Server
 }
 
-func NewRestApiServer(zapLog *otelzap.Logger, client *client.ICalClient) *RestApi {
+func NewRestApiServer(client *client.ICalClient) *RestApi {
 	e := &RestApi{
-		zapLog: zapLog,
 		client: client,
 	}
 
@@ -41,11 +39,11 @@ func NewRestApiServer(zapLog *otelzap.Logger, client *client.ICalClient) *RestAp
 	router.Use(otelgin.Middleware("conf_room_display"))
 
 	// Setup ginzap to log everything correctly to zap
-	router.Use(ginzap.GinzapWithConfig(zapLog, &ginzap.Config{
+	router.Use(ginzap.GinzapWithConfig(otelzap.L(), &ginzap.Config{
 		UTC:        true,
 		TimeFormat: time.RFC3339,
-		Context: ginzap.Fn(func(c *gin.Context) []zapcore.Field {
-			fields := []zapcore.Field{}
+		Context: func(c *gin.Context) []zapcore.Field {
+			var fields []zapcore.Field
 			// log request ID
 			if requestID := c.Writer.Header().Get("X-Request-Id"); requestID != "" {
 				fields = append(fields, zap.String("request_id", requestID))
@@ -57,7 +55,7 @@ func NewRestApiServer(zapLog *otelzap.Logger, client *client.ICalClient) *RestAp
 				fields = append(fields, zap.String("span_id", trace.SpanFromContext(c.Request.Context()).SpanContext().SpanID().String()))
 			}
 			return fields
-		}),
+		},
 	}))
 
 	// Set-up Prometheus to expose prometheus metrics
@@ -81,7 +79,7 @@ func NewRestApiServer(zapLog *otelzap.Logger, client *client.ICalClient) *RestAp
 }
 
 func (e *RestApi) ListenAndServe() error {
-	e.zapLog.Info(fmt.Sprintf("REST API Server listening at %s", e.srv.Addr))
+	otelzap.L().Info(fmt.Sprintf("REST API Server listening at %s", e.srv.Addr))
 	return e.srv.ListenAndServe()
 }
 
@@ -145,7 +143,7 @@ func (e *RestApi) GetCurrentEvent(ct *gin.Context) {
 func (e *RestApi) GetCustomStatus(ct *gin.Context) {
 	queryParams := ct.Request.URL.Query()
 	if !queryParams.Has("calendar") || queryParams.Get("calendar") == "" {
-		ct.AbortWithError(http.StatusBadRequest, fmt.Errorf("missing 'calendar' parameter in query parameters: %v", queryParams.Encode()))
+		_ = ct.AbortWithError(http.StatusBadRequest, fmt.Errorf("missing 'calendar' parameter in query parameters: %v", queryParams.Encode()))
 		return
 	}
 
