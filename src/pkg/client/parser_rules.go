@@ -7,6 +7,7 @@ import (
 
 	"github.com/spechtlabs/go-otel-utils/otelzap"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 
 	pb "github.com/SpechtLabs/CalendarAPI/pkg/protos"
 )
@@ -86,7 +87,11 @@ func (r *Rule) Evaluate(e *pb.CalendarEntry) (bool, bool) {
 }
 
 func parseRules() []Rule {
-	rules := []Rule{}
-	viper.UnmarshalKey("rules", &rules)
+	var rules []Rule
+	err := viper.UnmarshalKey("rules", &rules)
+	if err != nil {
+		otelzap.L().Sugar().Errorw("Failed to parse rules", zap.Error(err))
+		return nil
+	}
 	return rules
 }

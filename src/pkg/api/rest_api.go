@@ -42,8 +42,8 @@ func NewRestApiServer(client *client.ICalClient) *RestApi {
 	router.Use(ginzap.GinzapWithConfig(otelzap.L(), &ginzap.Config{
 		UTC:        true,
 		TimeFormat: time.RFC3339,
-		Context: ginzap.Fn(func(c *gin.Context) []zapcore.Field {
-			fields := []zapcore.Field{}
+		Context: func(c *gin.Context) []zapcore.Field {
+			var fields []zapcore.Field
 			// log request ID
 			if requestID := c.Writer.Header().Get("X-Request-Id"); requestID != "" {
 				fields = append(fields, zap.String("request_id", requestID))
@@ -55,7 +55,7 @@ func NewRestApiServer(client *client.ICalClient) *RestApi {
 				fields = append(fields, zap.String("span_id", trace.SpanFromContext(c.Request.Context()).SpanContext().SpanID().String()))
 			}
 			return fields
-		}),
+		},
 	}))
 
 	// Set-up Prometheus to expose prometheus metrics
@@ -143,7 +143,7 @@ func (e *RestApi) GetCurrentEvent(ct *gin.Context) {
 func (e *RestApi) GetCustomStatus(ct *gin.Context) {
 	queryParams := ct.Request.URL.Query()
 	if !queryParams.Has("calendar") || queryParams.Get("calendar") == "" {
-		ct.AbortWithError(http.StatusBadRequest, fmt.Errorf("missing 'calendar' parameter in query parameters: %v", queryParams.Encode()))
+		_ = ct.AbortWithError(http.StatusBadRequest, fmt.Errorf("missing 'calendar' parameter in query parameters: %v", queryParams.Encode()))
 		return
 	}
 

@@ -16,6 +16,7 @@ import (
 	"github.com/apognu/gocal"
 	"github.com/spechtlabs/go-otel-utils/otelzap"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 
 	pb "github.com/SpechtLabs/CalendarAPI/pkg/protos"
 )
@@ -64,8 +65,12 @@ func init() {
 }
 
 func parseCalendars() []Calendar {
-	calendars := []Calendar{}
-	viper.UnmarshalKey("calendars", &calendars)
+	var calendars []Calendar
+	err := viper.UnmarshalKey("calendars", &calendars)
+	if err != nil {
+		otelzap.L().Sugar().Errorw("Failed to parse calendars", zap.Error(err))
+	}
+
 	return calendars
 }
 
@@ -168,7 +173,7 @@ func (e *ICalClient) GetCurrentEvent(ctx context.Context, calendar string) *pb.C
 	closestDelta := int64(math.MaxInt64)
 
 	for _, entry := range possibleCurrentEvents {
-		delta := int64(now) - int64(entry.Start)
+		delta := now - entry.Start
 
 		if delta == closestDelta && entry.Important && (closest == nil || !closest.Important) {
 			closest = entry
@@ -181,7 +186,7 @@ func (e *ICalClient) GetCurrentEvent(ctx context.Context, calendar string) *pb.C
 	return closest
 }
 
-func (e *ICalClient) GetCustomStatus(ctx context.Context, req *pb.GetCustomStatusRequest) *pb.CustomStatus {
+func (e *ICalClient) GetCustomStatus(_ context.Context, req *pb.GetCustomStatusRequest) *pb.CustomStatus {
 	e.statusMux.RLock()
 	defer e.statusMux.RUnlock()
 
@@ -192,7 +197,7 @@ func (e *ICalClient) GetCustomStatus(ctx context.Context, req *pb.GetCustomStatu
 	return &pb.CustomStatus{}
 }
 
-func (e *ICalClient) SetCustomStatus(ctx context.Context, req *pb.SetCustomStatusRequest) {
+func (e *ICalClient) SetCustomStatus(_ context.Context, req *pb.SetCustomStatusRequest) {
 	e.statusMux.Lock()
 	defer e.statusMux.Unlock()
 
@@ -205,7 +210,12 @@ func (e *ICalClient) loadEvents(ctx context.Context, calName string, from string
 		return nil, errors.Wrap(err, fmt.Errorf("failed to load iCal calendar file"), "")
 	}
 
-	defer ical.Close()
+	defer func(ical io.ReadCloser) {
+		err := ical.Close()
+		if err != nil {
+			otelzap.L().Ctx(ctx).Sugar().Errorw("Failed to close iCal file", zap.Error(err))
+		}
+	}(ical)
 	cal := gocal.NewParser(ical)
 
 	// Filter to TODAY only

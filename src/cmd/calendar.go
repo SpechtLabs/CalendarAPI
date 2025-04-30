@@ -10,6 +10,8 @@ import (
 	pb "github.com/SpechtLabs/CalendarAPI/pkg/protos"
 	"github.com/spechtlabs/go-otel-utils/otelzap"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
 	"gopkg.in/yaml.v3"
 )
 
@@ -24,7 +26,12 @@ var clearCalendarCmd = &cobra.Command{
 		addr := fmt.Sprintf("%s:%d", hostname, grpcPort)
 
 		conn, client := api.NewGrpcApiClient(addr)
-		defer conn.Close()
+		defer func(conn *grpc.ClientConn) {
+			err := conn.Close()
+			if err != nil {
+				otelzap.L().Sugar().Errorw("failed to close gRPC connection", zap.Error(err))
+			}
+		}(conn)
 
 		// Contact the server
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -52,7 +59,12 @@ var getCalendarCmd = &cobra.Command{
 		addr := fmt.Sprintf("%s:%d", hostname, grpcPort)
 
 		conn, client := api.NewGrpcApiClient(addr)
-		defer conn.Close()
+		defer func(conn *grpc.ClientConn) {
+			err := conn.Close()
+			if err != nil {
+				otelzap.L().Sugar().Errorw("failed to close gRPC connection", zap.Error(err))
+			}
+		}(conn)
 
 		// Contact the server
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -67,14 +79,14 @@ var getCalendarCmd = &cobra.Command{
 		case "json":
 			json, err := json.Marshal(calendar)
 			if err != nil {
-				otelzap.L().Sugar().Error(err)
+				otelzap.L().Sugar().Error("failed to parse calendar config", zap.Error(err))
 			}
 			fmt.Println(string(json))
 
 		case "yaml":
 			yaml, err := yaml.Marshal(calendar)
 			if err != nil {
-				otelzap.L().Sugar().Error(err)
+				otelzap.L().Sugar().Error("failed to parse calendar config", zap.Error(err))
 			}
 			fmt.Println(string(yaml))
 

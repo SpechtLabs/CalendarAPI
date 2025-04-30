@@ -25,7 +25,7 @@ var (
 	hostname               string
 	grpcPort               int
 	restPort               int
-	defaultCalendarRefresh time.Duration = 30 * time.Minute
+	defaultCalendarRefresh = 30 * time.Minute
 	configFileName         string
 	debug                  bool
 )

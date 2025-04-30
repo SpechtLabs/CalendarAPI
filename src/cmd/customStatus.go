@@ -9,6 +9,8 @@ import (
 	pb "github.com/SpechtLabs/CalendarAPI/pkg/protos"
 	"github.com/spechtlabs/go-otel-utils/otelzap"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 var (
@@ -26,7 +28,12 @@ var getCustomStatusCmd = &cobra.Command{
 		addr := fmt.Sprintf("%s:%d", hostname, grpcPort)
 
 		conn, client := api.NewGrpcApiClient(addr)
-		defer conn.Close()
+		defer func(conn *grpc.ClientConn) {
+			err := conn.Close()
+			if err != nil {
+				otelzap.L().Sugar().Errorw("failed to close gRPC connection", zap.Error(err))
+			}
+		}(conn)
 
 		// Contact the server
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -57,7 +64,12 @@ var setCustomStatusCmd = &cobra.Command{
 		addr := fmt.Sprintf("%s:%d", hostname, grpcPort)
 
 		conn, client := api.NewGrpcApiClient(addr)
-		defer conn.Close()
+		defer func(conn *grpc.ClientConn) {
+			err := conn.Close()
+			if err != nil {
+				otelzap.L().Sugar().Errorw("failed to close gRPC connection", zap.Error(err))
+			}
+		}(conn)
 
 		// Contact the server
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -96,7 +108,12 @@ var clearCustomStatusCmd = &cobra.Command{
 		addr := fmt.Sprintf("%s:%d", hostname, grpcPort)
 
 		conn, client := api.NewGrpcApiClient(addr)
-		defer conn.Close()
+		defer func(conn *grpc.ClientConn) {
+			err := conn.Close()
+			if err != nil {
+				otelzap.L().Sugar().Errorw("failed to close gRPC connection", zap.Error(err))
+			}
+		}(conn)
 
 		// Contact the server
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -117,13 +134,13 @@ func init() {
 	setCustomStatusCmd.Flags().Int32Var(&iconSize, "icon_size", 196, "Icon size to display in the custom status")
 
 	setCustomStatusCmd.Flags().StringVarP(&calendar, "calendar", "q", "", "Name of the calendar to set the custom status for")
-	setCustomStatusCmd.MarkFlagRequired("calendar")
+	_ = setCustomStatusCmd.MarkFlagRequired("calendar")
 
 	getCustomStatusCmd.Flags().StringVarP(&calendar, "calendar", "q", "", "Name of the calendar to set the custom status for")
-	getCustomStatusCmd.MarkFlagRequired("calendar")
+	_ = getCustomStatusCmd.MarkFlagRequired("calendar")
 
 	clearCustomStatusCmd.Flags().StringVarP(&calendar, "calendar", "q", "", "Name of the calendar to set the custom status for")
-	clearCustomStatusCmd.MarkFlagRequired("calendar")
+	_ = clearCustomStatusCmd.MarkFlagRequired("calendar")
 
 	setCmd.AddCommand(setCustomStatusCmd)
 	getCmd.AddCommand(getCustomStatusCmd)
