@@ -9,7 +9,7 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/mcuadros/go-gin-prometheus v0.1.0
 	github.com/spechtlabs/go-otel-utils/otelprovider v0.0.6
-	github.com/spechtlabs/go-otel-utils/otelzap v0.0.6
+	github.com/spechtlabs/go-otel-utils/otelzap v0.0.7
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.60.0
@@ -57,6 +57,7 @@ require (
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/sagikazarmark/locafero v0.7.0 // indirect
+	github.com/sierrasoftworks/humane-errors-go v0.0.0-20241125132722-d032d7dd359e // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.12.0 // indirect
