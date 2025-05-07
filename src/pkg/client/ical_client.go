@@ -202,7 +202,7 @@ func (e *ICalClient) GetCurrentEvent(ctx context.Context, calendar string) *pb.C
 }
 
 func (e *ICalClient) GetCustomStatus(ctx context.Context, req *pb.GetCustomStatusRequest) *pb.CustomStatus {
-	ctx, span := e.tracer.Start(ctx, "ICalClient.GetCustomStatus")
+	_, span := e.tracer.Start(ctx, "ICalClient.GetCustomStatus")
 	defer span.End()
 
 	e.statusMux.RLock()
@@ -216,7 +216,7 @@ func (e *ICalClient) GetCustomStatus(ctx context.Context, req *pb.GetCustomStatu
 }
 
 func (e *ICalClient) SetCustomStatus(ctx context.Context, req *pb.SetCustomStatusRequest) {
-	ctx, span := e.tracer.Start(ctx, "ICalClient.SetCustomStatus")
+	_, span := e.tracer.Start(ctx, "ICalClient.SetCustomStatus")
 	defer span.End()
 
 	e.statusMux.Lock()
