@@ -2,6 +2,8 @@ github.com/ChannelMeter/iso8601duration v0.0.0-20150204201828-8da3af7a2a61 h1:N5
 github.com/ChannelMeter/iso8601duration v0.0.0-20150204201828-8da3af7a2a61/go.mod h1:GnKXcK+7DYNy/8w2Ex//Uql4IgfaU82Cd5rWKb7ah00=
 github.com/apognu/gocal v0.9.1 h1:e3vlb+YV5wXvqBxYsC6GvkuUAEnRipkvoA1P79gwspM=
 github.com/apognu/gocal v0.9.1/go.mod h1:5tNvJsQGJHwS3KqWxHAFZzavC4k42jrJ3ouVmOzS/AM=
+github.com/aws/smithy-go v1.22.3 h1:Z//5NuZCSW6R4PhQ93hShNbyBbn8BWCmCVCt+Q8Io5k=
+github.com/aws/smithy-go v1.22.3/go.mod h1:t1ufH5HMublsJYulve2RKmHDC15xu1f26kHCp/HgceI=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/bytedance/sonic v1.13.2 h1:8/H1FempDZqC4VqjptGo14QQlJx8VdZJegxs6wwfqpQ=
@@ -110,12 +112,10 @@ github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/sourcegraph/conc v0.3.0 h1:OQTbbt6P72L20UqAkXXuLOj79LfEanQ+YQFNpLA9ySo=
 github.com/sourcegraph/conc v0.3.0/go.mod h1:Sdozi7LEKbFPqYX2/J+iBAM6HpqSLTASQIKqDmF7Mt0=
-github.com/spechtlabs/go-otel-utils/otelprovider v0.0.3 h1:4oOesPI0xzLxlXkUJXbFWTU11sixh7fN8w9MYji89Jc=
-github.com/spechtlabs/go-otel-utils/otelprovider v0.0.3/go.mod h1:g4aR+dN5kWbCCOQW8VuO6XV/uN+lGSwi59Dk7fRtchk=
 github.com/spechtlabs/go-otel-utils/otelprovider v0.0.6 h1:ibQrJxWzcF0Ql9RyON9eDJzOVcHl/ImZ4lolXRXYn+s=
 github.com/spechtlabs/go-otel-utils/otelprovider v0.0.6/go.mod h1:KYCRZw2eZJIUBd66Q0peZy3UwX+OBWEAN8mEIU9Xguo=
-github.com/spechtlabs/go-otel-utils/otelzap v0.0.4 h1:dAqZTD+aT4Laqxa9QX1/g4JtY+uH0PLHMXUZUeN24Fo=
-github.com/spechtlabs/go-otel-utils/otelzap v0.0.4/go.mod h1:2bhE3TQVul1RoJmJ5BIBOsUmh4yFBGFLmRTWQQA/3s8=
+github.com/spechtlabs/go-otel-utils/otelzap v0.0.6 h1:nCSqGF0phhIZCtF53YUgwfGVUhkFvyZv42xztioNSyw=
+github.com/spechtlabs/go-otel-utils/otelzap v0.0.6/go.mod h1:wYDKgGeOKyK5PVB+tfvkZovHm9VP6zEn+osJdKmepX8=
 github.com/spf13/afero v1.12.0 h1:UcOPyRBYczmFn6yvphxkn9ZEOY65cpwGKb5mL36mrqs=
 github.com/spf13/afero v1.12.0/go.mod h1:ZTlWwG4/ahT8W7T0WQ5uYmjI9duaLQGy3Q2OAl4sk/4=
 github.com/spf13/cast v1.7.1 h1:cuNEagBQEHWN1FnbGEjCXL2szYEXqfJPbP2HNUaca9Y=

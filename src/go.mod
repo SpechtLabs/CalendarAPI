@@ -9,7 +9,7 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/mcuadros/go-gin-prometheus v0.1.0
 	github.com/spechtlabs/go-otel-utils/otelprovider v0.0.6
-	github.com/spechtlabs/go-otel-utils/otelzap v0.0.4
+	github.com/spechtlabs/go-otel-utils/otelzap v0.0.6
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.60.0
@@ -24,6 +24,7 @@ require (
 
 require (
 	github.com/ChannelMeter/iso8601duration v0.0.0-20150204201828-8da3af7a2a61 // indirect
+	github.com/aws/smithy-go v1.22.3 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bytedance/sonic v1.13.2 // indirect
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
