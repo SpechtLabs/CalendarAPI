@@ -17,7 +17,6 @@ on:
 
 jobs:
   build:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build (Docs)
     steps:
@@ -27,8 +26,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 'lts/*'
-          cache: 'npm'
+          node-version: "lts/*"
+          cache: "npm"
           cache-dependency-path: docs/package-lock.json
 
       - name: Install Dependencies
@@ -46,15 +45,11 @@ jobs:
   deploy-gh-pages:
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'push'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
 
     permissions:
       id-token: write
       pages: write
-
-    environment:
-      name: github-pages
-      url: https://calendarapi.specht-labs.de
 
     steps:
       - name: Setup GitHub Pages
@@ -76,3 +71,25 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  deploy-static-pages:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+
+    permissions:
+      id-token: write
+      pages: write
+
+    steps:
+      - name: Download Artifacts for Website
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: ./dist
+
+      - name: Upload to Static Pages
+        uses: SpechtLabs/StaticPages-Upload@main
+        with:
+          endpoint: https://pages.specht-labs.de
+          site-dir: dist/
