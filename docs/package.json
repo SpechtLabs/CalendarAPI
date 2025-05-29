@@ -46,6 +46,9 @@
     "mermaid": "^11.5.0",
     "vue-template-compiler": "^2.7.16"
   },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.38.0"
+  },
   "scripts": {
     "dev": "vuepress dev",
     "dev-clean": "vuepress dev . --clean-cache --clean-temp",
