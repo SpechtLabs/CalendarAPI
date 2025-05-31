@@ -8,7 +8,7 @@ config:
       name: CalendarAPI
       text: Easily expose your calendars via modern APIs.
       tagline: CalendarAPI parses iCal (.ics) files and serves them over gRPC and REST. It supports hot config reloads via Viper and comes with a Home Assistant add-on.
-      image: /images/specht-labs-rounded.png
+      image: /logo.png
       actions:
         - text: Get Started
           link: /guide/
