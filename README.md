@@ -1,8 +1,8 @@
 # 📆 CalendarAPI
 
-[![Release](https://github.com/SpechtLabs/CalendarAPI/actions/workflows/release.yaml/badge.svg)](https://github.com/SpechtLabs/CalendarAPI/actions/workflows/release.yaml)
-[![Continuous Integration](https://github.com/SpechtLabs/CalendarAPI/actions/workflows/build.yaml/badge.svg)](https://github.com/SpechtLabs/CalendarAPI/actions/workflows/build.yaml)
-[![Documentation](https://github.com/SpechtLabs/CalendarAPI/actions/workflows/docs-website.yaml/badge.svg)](https://github.com/SpechtLabs/CalendarAPI/actions/workflows/docs-website.yaml)
+[![Release](https://github.com/SpechtLabs/CalendarAPI/actions/workflows/release.yaml/badge.svg?branch=main)](https://github.com/SpechtLabs/CalendarAPI/actions/workflows/release.yaml)
+[![Continuous Integration](https://github.com/SpechtLabs/CalendarAPI/actions/workflows/build.yaml/badge.svg?branch=main)](https://github.com/SpechtLabs/CalendarAPI/actions/workflows/build.yaml)
+[![Documentation](https://github.com/SpechtLabs/CalendarAPI/actions/workflows/docs-website.yaml/badge.svg?branch=main)](https://github.com/SpechtLabs/CalendarAPI/actions/workflows/docs-website.yaml)
 
 CalendarAPI is a service that parses iCal files and exposes their content via gRPC or a REST API. It uses Viper for configuration, which supports runtime reloads.
 
