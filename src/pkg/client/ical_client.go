@@ -256,7 +256,7 @@ func (e *ICalClient) loadEvents(ctx context.Context, calName string, from string
 	cal.Start, cal.End = &start, &end
 
 	if err := cal.Parse(); err != nil {
-		return nil, humane.New(fmt.Sprintf("unable to parse iCal file %w", err), "ensure the iCal file is valid and follows the iCal spec")
+		return nil, humane.Wrap(err, "unable to parse iCal file", "ensure the iCal file is valid and follows the iCal spec")
 	}
 
 	// Sort Events by start-date (makes our live easier down the line)
@@ -369,7 +369,7 @@ func (e *ICalClient) getIcalFromURL(ctx context.Context, url string) (io.ReadClo
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return nil, humane.New(fmt.Sprintf("failed creating request for %s: %w", url, err), "")
+		return nil, humane.Wrap(err, fmt.Sprintf("failed creating request for %s", url), "verify if URL is valid and well-formed")
 	}
 
 	client := http.DefaultClient
@@ -377,7 +377,7 @@ func (e *ICalClient) getIcalFromURL(ctx context.Context, url string) (io.ReadClo
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return nil, humane.New(fmt.Sprintf("failed making request to %s: %w", url, err), "verify if URL exists and is accessible")
+		return nil, humane.Wrap(err, fmt.Sprintf("failed making request to %s", url), "verify if URL exists and is accessible")
 	}
 
 	return resp.Body, nil

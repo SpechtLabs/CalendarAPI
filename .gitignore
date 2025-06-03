@@ -58,3 +58,4 @@ typings/
 .nuxt
 dist
 **/node_modules
+src/main
