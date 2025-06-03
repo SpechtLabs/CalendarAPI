@@ -12,11 +12,11 @@ config:
       actions:
         - text: Get Started
           link: /guide/overview
-          type: brand
+          theme: brand
           icon: simple-icons:bookstack
         - text: GitHub Releases
           link: https://github.com/SpechtLabs/CalendarAPI/releases
-          type: alt
+          theme: alt
           icon: simple-icons:github
 
   - type: features
