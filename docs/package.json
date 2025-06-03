@@ -28,26 +28,25 @@
   },
   "homepage": "https://github.com/SpechtLabs/CalendarAPI#readme",
   "devDependencies": {
-    "@vuepress/bundler-vite": "^2.0.0-rc.20",
-    "@vuepress/plugin-google-analytics": "2.0.0-rc.80",
-    "@vuepress/plugin-register-components": "2.0.0-rc.82",
-    "@vuepress/theme-default": "2.0.0-rc.92",
+    "@vuepress/bundler-vite": "^2.0.0-rc.23",
+    "@vuepress/plugin-register-components": "2.0.0-rc.103",
     "http-server": "^14.1.1",
     "sass-embedded": "^1.89.0",
     "typescript": "^5.7.3",
     "vue": "^3.5.13",
-    "vuepress": "2.0.0-rc.20",
-    "vuepress-theme-plume": "1.0.0-rc.140"
+    "vuepress": "2.0.0-rc.23",
+    "vuepress-theme-plume": "1.0.0-rc.152"
   },
   "dependencies": {
     "@vue/component-compiler-utils": "^3.3.0",
-    "lru-cache": "^11.0.0",
-    "markdown-it-emoji": "^3.0.0",
+    "lru-cache": "^6.0.0",
+    "markdown-it-emoji": "^2.0.0",
     "mermaid": "^11.5.0",
     "vue-template-compiler": "^2.7.16"
   },
   "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "^4.38.0"
+    "@rollup/rollup-linux-x64-gnu": "^4.38.0",
+    "sass-embedded-linux-x64": "latest"
   },
   "scripts": {
     "dev": "vuepress dev",
