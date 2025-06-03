@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/SpechtLabs/CalendarAPI/pkg/errors"
 	"github.com/apognu/gocal"
+	"github.com/sierrasoftworks/humane-errors-go"
 	"github.com/spechtlabs/go-otel-utils/otelzap"
 	"github.com/spf13/viper"
 	"go.opentelemetry.io/otel"
@@ -115,7 +115,7 @@ func (e *ICalClient) FetchEvents(ctx context.Context) {
 			events, err := e.loadEvents(ctx, name, from, url, rules)
 			stop := time.Now()
 			if err != nil {
-				otelzap.L().Ctx(ctx).Sugar().Errorw("Unable to load events", err.AsZapLogKV())
+				otelzap.L().WithError(err).Ctx(ctx).Error("Unable to load events")
 			}
 
 			eventsMux.Lock()
@@ -225,7 +225,7 @@ func (e *ICalClient) SetCustomStatus(ctx context.Context, req *pb.SetCustomStatu
 	e.CustomStatus[req.CalendarName] = req.Status
 }
 
-func (e *ICalClient) loadEvents(ctx context.Context, calName string, from string, url string, rules []Rule) ([]*pb.CalendarEntry, *errors.ResolvingError) {
+func (e *ICalClient) loadEvents(ctx context.Context, calName string, from string, url string, rules []Rule) ([]*pb.CalendarEntry, humane.Error) {
 	ctx, span := e.tracer.Start(ctx, "ICalClient.loadEvents")
 	defer span.End()
 
@@ -237,7 +237,7 @@ func (e *ICalClient) loadEvents(ctx context.Context, calName string, from string
 
 	ical, err := e.getIcal(ctx, from, url)
 	if ical == nil || err != nil {
-		return nil, errors.Wrap(err, fmt.Errorf("failed to load iCal calendar file"), "")
+		return nil, humane.Wrap(err, "failed to load iCal calendar file")
 	}
 
 	defer func(ical io.ReadCloser) {
@@ -256,7 +256,7 @@ func (e *ICalClient) loadEvents(ctx context.Context, calName string, from string
 	cal.Start, cal.End = &start, &end
 
 	if err := cal.Parse(); err != nil {
-		return nil, errors.NewResolvingError(fmt.Errorf("unable to parse iCal file %w", err), "ensure the iCal file is valid and follows the iCal spec")
+		return nil, humane.New(fmt.Sprintf("unable to parse iCal file %w", err), "ensure the iCal file is valid and follows the iCal spec")
 	}
 
 	// Sort Events by start-date (makes our live easier down the line)
@@ -341,23 +341,23 @@ func NewCalendarEntryFromGocalEvent(calName string, e gocal.Event) *pb.CalendarE
 	}
 }
 
-func (e *ICalClient) getIcal(ctx context.Context, from string, url string) (io.ReadCloser, *errors.ResolvingError) {
+func (e *ICalClient) getIcal(ctx context.Context, from string, url string) (io.ReadCloser, humane.Error) {
 	switch from {
 	case "file":
 		return e.getIcalFromFile(url)
 	case "url":
 		return e.getIcalFromURL(ctx, url)
 	default:
-		return nil, errors.NewResolvingError(fmt.Errorf("unsupported 'from' type"), "The only supported values for 'from' are 'file' or 'url'")
+		return nil, humane.New("unsupported 'from' type", "The only supported values for 'from' are 'file' or 'url'")
 	}
 }
 
-func (e *ICalClient) getIcalFromFile(path string) (io.ReadCloser, *errors.ResolvingError) {
+func (e *ICalClient) getIcalFromFile(path string) (io.ReadCloser, humane.Error) {
 	file, err := os.Open(path)
-	return file, errors.NewResolvingError(err, "check if file path exists and is accessible")
+	return file, humane.Wrap(err, "unbable to read iCal File", "check if file path exists and is accessible")
 }
 
-func (e *ICalClient) getIcalFromURL(ctx context.Context, url string) (io.ReadCloser, *errors.ResolvingError) {
+func (e *ICalClient) getIcalFromURL(ctx context.Context, url string) (io.ReadCloser, humane.Error) {
 	ctx, span := e.tracer.Start(ctx, "ICalClient.getIcalFromURL")
 	defer span.End()
 
@@ -369,7 +369,7 @@ func (e *ICalClient) getIcalFromURL(ctx context.Context, url string) (io.ReadClo
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return nil, errors.NewResolvingError(fmt.Errorf("failed creating request for %s: %w", url, err), "")
+		return nil, humane.New(fmt.Sprintf("failed creating request for %s: %w", url, err), "")
 	}
 
 	client := http.DefaultClient
@@ -377,7 +377,7 @@ func (e *ICalClient) getIcalFromURL(ctx context.Context, url string) (io.ReadClo
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return nil, errors.NewResolvingError(fmt.Errorf("failed making request to %s: %w", url, err), "verify if URL exists and is accessible")
+		return nil, humane.New(fmt.Sprintf("failed making request to %s: %w", url, err), "verify if URL exists and is accessible")
 	}
 
 	return resp.Body, nil
