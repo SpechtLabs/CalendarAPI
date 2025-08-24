@@ -84,7 +84,7 @@ var serveCmd = &cobra.Command{
 			}
 			otelzap.L().Sugar().With("config_file", string(file)).Debug("Config file used")
 		}
-		
+
 		iCalClient := client.NewICalClient()
 
 		quitRefreshTicker := initCalendarRefresh(iCalClient)
