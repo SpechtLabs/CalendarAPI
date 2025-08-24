@@ -5,11 +5,10 @@ import (
 	"strconv"
 	"strings"
 
+	pb "github.com/SpechtLabs/CalendarAPI/pkg/protos"
 	"github.com/spechtlabs/go-otel-utils/otelzap"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
-
-	pb "github.com/SpechtLabs/CalendarAPI/pkg/protos"
 )
 
 type Rule struct {
@@ -81,7 +80,17 @@ func (r *Rule) Evaluate(e *pb.CalendarEntry) (bool, bool) {
 		e.Important = r.Important
 	}
 
-	otelzap.L().Sugar().Debugw("Rule Evaluated", "rule_name", r.Name, "calendar_name", r.CalendarName, "title", e.Title, "key", r.Key, "Field", matchFieldValue, "contains", matchFieldContains, "skip", r.Skip, "relabel_important", e.Important, "relabel_message", e.Message)
+	otelzap.L().Sugar().Debugw("Rule Evaluated",
+		zap.String("rule_name", r.Name),
+		zap.String("calendar_name", r.CalendarName),
+		zap.String("title", e.Title),
+		zap.String("key", r.Key),
+		zap.String("Field", matchFieldValue),
+		zap.String("contains", matchFieldContains),
+		zap.Bool("skip", r.Skip),
+		zap.Bool("relabel_important", e.Important),
+		zap.String("relabel_message", e.Message),
+	)
 
 	return true, r.Skip
 }
@@ -90,7 +99,7 @@ func parseRules() []Rule {
 	var rules []Rule
 	err := viper.UnmarshalKey("rules", &rules)
 	if err != nil {
-		otelzap.L().Sugar().Errorw("Failed to parse rules", zap.Error(err))
+		otelzap.L().WithError(err).Error("Failed to parse rules")
 		return nil
 	}
 	return rules

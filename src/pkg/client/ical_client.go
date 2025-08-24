@@ -73,7 +73,7 @@ func parseCalendars() []Calendar {
 	var calendars []Calendar
 	err := viper.UnmarshalKey("calendars", &calendars)
 	if err != nil {
-		otelzap.L().Sugar().Errorw("Failed to parse calendars", zap.Error(err))
+		otelzap.L().WithError(err).Error("Failed to parse calendars")
 	}
 
 	return calendars
@@ -111,6 +111,8 @@ func (e *ICalClient) FetchEvents(ctx context.Context) {
 		wg.Add(1)
 
 		go func() {
+			defer wg.Done()
+
 			start := time.Now()
 			events, err := e.loadEvents(ctx, name, from, url, rules)
 			stop := time.Now()
@@ -123,11 +125,16 @@ func (e *ICalClient) FetchEvents(ctx context.Context) {
 			response.Entries = append(response.Entries, events...)
 			eventsMux.Unlock()
 
-			otelzap.L().Ctx(ctx).Sugar().Infof("Refreshed calendar %s in %dms", name, stop.Sub(start).Milliseconds())
-
-			wg.Done()
+			otelzap.L().Ctx(ctx).Info("Refreshed calendar", zap.String("name", name), zap.Duration("duration", stop.Sub(start)))
 		}()
 	}
+
+	// Sort Events by start-date (makes our live easier down the line)
+	sort.Slice(response.Entries, func(i int, j int) bool {
+		left := time.Unix(response.Entries[i].Start, 0)
+		right := time.Unix(response.Entries[j].Start, 0)
+		return left.Before(right)
+	})
 
 	wg.Wait()
 	e.cacheMux.Lock()
@@ -140,7 +147,7 @@ func (e *ICalClient) GetEvents(ctx context.Context) *pb.CalendarResponse {
 	defer span.End()
 
 	if e.cache == nil {
-		otelzap.L().Ctx(ctx).Sugar().Infow("Experiencing cold. Fetching events now!")
+		otelzap.L().Ctx(ctx).Info("Experiencing cold. Fetching events now!")
 		e.FetchEvents(ctx)
 	}
 
@@ -154,7 +161,7 @@ func (e *ICalClient) GetCurrentEvent(ctx context.Context, calendar string) *pb.C
 	defer span.End()
 
 	if e.cache == nil {
-		otelzap.L().Ctx(ctx).Sugar().Infow("Experiencing cold. Fetching events now!")
+		otelzap.L().Ctx(ctx).Info("Experiencing cold. Fetching events now!")
 		e.FetchEvents(ctx)
 	}
 
@@ -243,7 +250,7 @@ func (e *ICalClient) loadEvents(ctx context.Context, calName string, from string
 	defer func(ical io.ReadCloser) {
 		err := ical.Close()
 		if err != nil {
-			otelzap.L().Ctx(ctx).Sugar().Errorw("Failed to close iCal file", zap.Error(err))
+			otelzap.L().WithError(err).Ctx(ctx).Error("Failed to close iCal file")
 		}
 	}(ical)
 	cal := gocal.NewParser(ical)
@@ -258,13 +265,6 @@ func (e *ICalClient) loadEvents(ctx context.Context, calName string, from string
 	if err := cal.Parse(); err != nil {
 		return nil, humane.Wrap(err, "unable to parse iCal file", "ensure the iCal file is valid and follows the iCal spec")
 	}
-
-	// Sort Events by start-date (makes our live easier down the line)
-	sort.Slice(cal.Events, func(i int, j int) bool {
-		left := cal.Events[i]
-		right := cal.Events[j]
-		return left.Start.Before(*right.Start)
-	})
 
 	events := make([]*pb.CalendarEntry, 0)
 	for _, evnt := range cal.Events {
@@ -371,6 +371,7 @@ func (e *ICalClient) getIcalFromURL(ctx context.Context, url string) (io.ReadClo
 		span.SetStatus(codes.Error, err.Error())
 		return nil, humane.Wrap(err, fmt.Sprintf("failed creating request for %s", url), "verify if URL is valid and well-formed")
 	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/81.0")
 
 	client := http.DefaultClient
 	resp, err := client.Do(req)
@@ -378,6 +379,17 @@ func (e *ICalClient) getIcalFromURL(ctx context.Context, url string) (io.ReadClo
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return nil, humane.Wrap(err, fmt.Sprintf("failed making request to %s", url), "verify if URL exists and is accessible")
+	}
+
+	// Add error handling for non-2xx status codes
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		// Close the response body to avoid leaking resources
+		_ = resp.Body.Close()
+
+		statusErr := fmt.Errorf("unexpected HTTP status: %s", resp.Status)
+		span.SetStatus(codes.Error, "received non-2xx status code")
+		span.RecordError(statusErr)
+		return nil, humane.Wrap(statusErr, "server returned an error")
 	}
 
 	return resp.Body, nil
