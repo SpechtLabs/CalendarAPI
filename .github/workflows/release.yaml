@@ -127,7 +127,7 @@ jobs:
           fetch-depth: 0
 
       - name: Pull in platform artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: CalendarAPI-linux-${{ matrix.arch }}
 
@@ -177,7 +177,7 @@ jobs:
           echo "FULL_IMAGE_NAME=${image}" >> $GITHUB_ENV
 
       - name: Download digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: /tmp/digests
           pattern: image-digest-*
