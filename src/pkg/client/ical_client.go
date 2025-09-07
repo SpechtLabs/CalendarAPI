@@ -232,6 +232,32 @@ func (e *ICalClient) SetCustomStatus(ctx context.Context, req *pb.SetCustomStatu
 	e.CustomStatus[req.CalendarName] = req.Status
 }
 
+func saveIcalParse(ical io.ReadCloser) (events []gocal.Event, err humane.Error) {
+	// Filter to TODAY only
+	today, _ := time.Parse(time.DateOnly, time.Now().Format(time.DateOnly))
+	eod := today.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
+
+	cal := gocal.NewParser(ical)
+	start, end := today, eod
+	cal.Start, cal.End = &start, &end
+
+	// Protect against panics in gocal.Parse
+	defer func() {
+		if r := recover(); r != nil {
+			// Convert panic into a humane.Error
+			// You could also add stack trace info here if useful
+			err = humane.Wrap(fmt.Errorf("%v", r), "panic occurred while parsing iCal data", "the iCal data might be malformed")
+			events = nil
+		}
+	}()
+
+	if err := cal.Parse(); err != nil {
+		return nil, humane.Wrap(err, "unable to parse iCal file", "ensure the iCal file is valid and follows the iCal spec")
+	}
+
+	return cal.Events, nil
+}
+
 func (e *ICalClient) loadEvents(ctx context.Context, calName string, from string, url string, rules []Rule) ([]*pb.CalendarEntry, humane.Error) {
 	ctx, span := e.tracer.Start(ctx, "ICalClient.loadEvents")
 	defer span.End()
@@ -253,21 +279,14 @@ func (e *ICalClient) loadEvents(ctx context.Context, calName string, from string
 			otelzap.L().WithError(err).Ctx(ctx).Error("Failed to close iCal file")
 		}
 	}(ical)
-	cal := gocal.NewParser(ical)
 
-	// Filter to TODAY only
-	today, _ := time.Parse(time.DateOnly, time.Now().Format(time.DateOnly))
-	eod := today.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
-
-	start, end := today, eod
-	cal.Start, cal.End = &start, &end
-
-	if err := cal.Parse(); err != nil {
-		return nil, humane.Wrap(err, "unable to parse iCal file", "ensure the iCal file is valid and follows the iCal spec")
+	calEvents, err := saveIcalParse(ical)
+	if err != nil {
+		return nil, humane.Wrap(err, "failed to parse iCal calendar file")
 	}
 
 	events := make([]*pb.CalendarEntry, 0)
-	for _, evnt := range cal.Events {
+	for _, evnt := range calEvents {
 		event := NewCalendarEntryFromGocalEvent(calName, evnt)
 		if event == nil {
 			continue
