@@ -117,7 +117,7 @@ func (e *ICalClient) FetchEvents(ctx context.Context) {
 			events, err := e.loadEvents(ctx, name, from, url, rules)
 			stop := time.Now()
 			if err != nil {
-				otelzap.L().WithError(err).Ctx(ctx).Error("Unable to load events")
+				otelzap.L().WithError(err).Ctx(ctx).Error("Unable to load events", zap.String("calendar", name), zap.String("from", from), zap.String("url", url))
 			}
 
 			eventsMux.Lock()
@@ -129,14 +129,22 @@ func (e *ICalClient) FetchEvents(ctx context.Context) {
 		}()
 	}
 
+	wg.Wait()
+
 	// Sort Events by start-date (makes our live easier down the line)
 	sort.Slice(response.Entries, func(i int, j int) bool {
-		left := time.Unix(response.Entries[i].Start, 0)
-		right := time.Unix(response.Entries[j].Start, 0)
-		return left.Before(right)
+		leftStart := time.Unix(response.Entries[i].Start, 0)
+		rightStart := time.Unix(response.Entries[j].Start, 0)
+		leftEnd := time.Unix(response.Entries[i].End, 0)
+		rightEnd := time.Unix(response.Entries[j].End, 0)
+
+		if leftStart.Equal(rightStart) {
+			return leftEnd.Before(rightEnd)
+		}
+
+		return leftStart.Before(rightStart)
 	})
 
-	wg.Wait()
 	e.cacheMux.Lock()
 	e.cache = response
 	e.cacheMux.Unlock()
@@ -232,7 +240,7 @@ func (e *ICalClient) SetCustomStatus(ctx context.Context, req *pb.SetCustomStatu
 	e.CustomStatus[req.CalendarName] = req.Status
 }
 
-func saveIcalParse(ical io.ReadCloser) (events []gocal.Event, err humane.Error) {
+func safeIcalParse(ical io.ReadCloser) (events []gocal.Event, err humane.Error) {
 	// Filter to TODAY only
 	today, _ := time.Parse(time.DateOnly, time.Now().Format(time.DateOnly))
 	eod := today.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
@@ -280,7 +288,7 @@ func (e *ICalClient) loadEvents(ctx context.Context, calName string, from string
 		}
 	}(ical)
 
-	calEvents, err := saveIcalParse(ical)
+	calEvents, err := safeIcalParse(ical)
 	if err != nil {
 		return nil, humane.Wrap(err, "failed to parse iCal calendar file")
 	}

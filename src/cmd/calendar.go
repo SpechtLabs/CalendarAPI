@@ -8,6 +8,7 @@ import (
 
 	"github.com/SpechtLabs/CalendarAPI/pkg/api"
 	pb "github.com/SpechtLabs/CalendarAPI/pkg/protos"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spechtlabs/go-otel-utils/otelzap"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -97,29 +98,124 @@ var getCalendarCmd = &cobra.Command{
 }
 
 func formatText(resp *pb.CalendarResponse) string {
-	outStr := fmt.Sprintf("Got Calendar (last refreshed: %s)\n\n", time.Unix(resp.LastUpdated, 0).Format(time.RFC822))
+	now := time.Now()
 
-	for idx, item := range resp.Entries {
-		outStr += fmt.Sprintf("%d) ", idx)
+	// Styles
+	headerStyle := lipgloss.NewStyle().Bold(true).Underline(true)
+	contextStyle := lipgloss.NewStyle().Italic(true).Foreground(lipgloss.Color("#999999"))
+	importantStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000")).Bold(true)
+	freeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#999999"))
+	tentativeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500")).Italic(true)
+	outOfOfficeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#800080")).Bold(true)
+	defaultStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF"))
+	strikeThroughStyle := lipgloss.NewStyle().Strikethrough(true).Foreground(lipgloss.Color("#666666"))
 
-		if item.Important {
-			outStr += "!"
+	outStr := ""
+	outStr += contextStyle.Render(fmt.Sprintf("(last refreshed: %s)", time.Unix(resp.LastUpdated, 0).Format(time.TimeOnly)))
+	outStr += "\n\n"
+
+	outStr += fmt.Sprintf("Calendar: %s Date: %s",
+		headerStyle.Render(resp.CalendarName),
+		headerStyle.Render(time.Unix(resp.LastUpdated, 0).Format(time.DateOnly)),
+	)
+
+	outStr += "\n"
+
+	// Separate all-day from timed events
+	allDayEntries := []*pb.CalendarEntry{}
+	normalEntries := []*pb.CalendarEntry{}
+	showCalendarName := false
+	for _, e := range resp.Entries {
+		if e.CalendarName != resp.CalendarName {
+			showCalendarName = true
 		}
-
-		outStr += fmt.Sprintf("%s: [%s to %s] - %s", item.Title, time.Unix(item.Start, 0).Format(time.RFC822), time.Unix(item.End, 0).Format(time.RFC822), item.Busy.String())
-
-		if item.AllDay {
-			outStr += " (all day)"
+		if e.AllDay {
+			allDayEntries = append(allDayEntries, e)
+		} else {
+			normalEntries = append(normalEntries, e)
 		}
+	}
 
-		if len(item.Message) > 0 {
-			outStr += fmt.Sprintf(": %s", item.Message)
-		}
+	idx := 1
+	// Show all-day first
+	for _, item := range allDayEntries {
+		outStr += renderEntry(item, idx, now, showCalendarName, strikeThroughStyle, importantStyle,
+			freeStyle, tentativeStyle, outOfOfficeStyle, defaultStyle, contextStyle)
+		idx++
+	}
 
-		outStr += "\n"
+	// Then timed events
+	for _, item := range normalEntries {
+		outStr += renderEntry(item, idx, now, showCalendarName, strikeThroughStyle, importantStyle,
+			freeStyle, tentativeStyle, outOfOfficeStyle, defaultStyle, contextStyle)
+		idx++
 	}
 
 	return outStr
+}
+
+func renderEntry(
+	item *pb.CalendarEntry,
+	idx int,
+	now time.Time,
+	showCalendarName bool,
+	strikeThroughStyle, importantStyle, freeStyle,
+	tentativeStyle, outOfOfficeStyle, defaultStyle,
+	contextStyle lipgloss.Style,
+) string {
+	start := time.Unix(item.Start, 0)
+	end := time.Unix(item.End, 0)
+
+	// Base line (without styling yet)
+	var line string
+
+	// 1. Add Index
+	line = fmt.Sprintf("%2d) ", idx)
+
+	// 2. Add status (only for tentative, OOO, or working elsewhere)
+	switch item.Busy {
+	case pb.BusyState_Tentative:
+		fallthrough
+	case pb.BusyState_OutOfOffice:
+		fallthrough
+	case pb.BusyState_WorkingElsewhere:
+		line += fmt.Sprintf("[%s]", item.Busy.String())
+	}
+
+	if item.AllDay {
+		line += fmt.Sprintf("%s (all day)", item.Title)
+	} else {
+		line += fmt.Sprintf("%s: <%s - %s>", item.Title, start.Format(time.Kitchen), end.Format(time.Kitchen))
+	}
+
+	if len(item.Message) > 0 {
+		line += fmt.Sprintf(" - %s", item.Message)
+	}
+
+	// Past event? Strike through
+	if end.Before(now) {
+		return strikeThroughStyle.Render(line) + strikeThroughStyle.Italic(true).Render(fmt.Sprintf(" (%s)", item.CalendarName)) + "\n"
+	}
+
+	// Apply styles based on attributes
+	switch {
+	case item.Important:
+		line = importantStyle.Render(line)
+	case item.Busy == pb.BusyState_Free:
+		line = freeStyle.Render(line)
+	case item.Busy == pb.BusyState_Tentative:
+		line = tentativeStyle.Render(line)
+	case item.Busy == pb.BusyState_OutOfOffice || item.Busy == pb.BusyState_WorkingElsewhere:
+		line = outOfOfficeStyle.Render(line)
+	default:
+		line = defaultStyle.Render(line)
+	}
+
+	if showCalendarName {
+		line += contextStyle.Render(fmt.Sprintf(" (%s)", item.CalendarName))
+	}
+
+	return line + "\n"
 }
 
 func init() {
