@@ -7,7 +7,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gin-contrib/zap v1.1.5
 	github.com/gin-gonic/gin v1.10.1
-	github.com/mcuadros/go-gin-prometheus v0.1.0
+	github.com/mcuadros/go-gin-prometheus v1.0.2
 	github.com/sierrasoftworks/humane-errors-go v0.0.0-20250811205537-5f14a04ebff5
 	github.com/spechtlabs/go-otel-utils/otelprovider v0.0.13
 	github.com/spechtlabs/go-otel-utils/otelzap v0.0.13
