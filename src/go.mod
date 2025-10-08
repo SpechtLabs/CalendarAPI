@@ -4,11 +4,12 @@ go 1.24.0
 
 require (
 	github.com/apognu/gocal v0.9.1
+	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gin-contrib/zap v1.1.5
 	github.com/gin-gonic/gin v1.10.1
 	github.com/mcuadros/go-gin-prometheus v0.1.0
-	github.com/sierrasoftworks/humane-errors-go v0.0.0-20250811205537-5f14a04ebff5
+	github.com/sierrasoftworks/humane-errors-go v0.0.0-20250904141959-2224f06cddb4
 	github.com/spechtlabs/go-otel-utils/otelprovider v0.0.13
 	github.com/spechtlabs/go-otel-utils/otelzap v0.0.13
 	github.com/spf13/cobra v1.9.1
@@ -33,7 +34,6 @@ require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/colorprofile v0.3.2 // indirect
-	github.com/charmbracelet/lipgloss v1.1.0 // indirect
 	github.com/charmbracelet/x/ansi v0.10.1 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13 // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
