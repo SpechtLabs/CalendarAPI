@@ -29,7 +29,7 @@
   "homepage": "https://github.com/SpechtLabs/CalendarAPI#readme",
   "devDependencies": {
     "@vuepress/bundler-vite": "^2.0.0-rc.23",
-    "@vuepress/plugin-register-components": "2.0.0-rc.122",
+    "@vuepress/plugin-register-components": "2.0.0-rc.123",
     "http-server": "^14.1.1",
     "sass-embedded": "^1.93.2",
     "typescript": "^5.9.3",
