@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/apognu/gocal v0.9.1
-	github.com/charmbracelet/lipgloss v1.1.0
+	github.com/charmbracelet/lipgloss/v2 v2.0.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gin-contrib/zap v1.1.6
 	github.com/gin-gonic/gin v1.11.0
