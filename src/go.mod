@@ -1,6 +1,6 @@
 module github.com/SpechtLabs/CalendarAPI
 
-go 1.26.6
+go 1.26.7
 
 require (
 	github.com/apognu/gocal v0.9.1
