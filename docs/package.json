@@ -33,7 +33,7 @@
     "http-server": "^14.1.1",
     "sass-embedded": "^1.103.1",
     "typescript": "^5.9.3",
-    "vue": "^3.5.41",
+    "vue": "^3.5.42",
     "vuepress": "2.0.0-rc.31",
     "vuepress-theme-plume": "1.0.0-rc.205"
   },
@@ -45,7 +45,7 @@
     "vue-template-compiler": "^2.7.16"
   },
   "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "^4.62.5",
+    "@rollup/rollup-linux-x64-gnu": "^4.63.0",
     "sass-embedded-linux-x64": "latest"
   },
   "scripts": {
