@@ -6,7 +6,7 @@ require (
 	github.com/apognu/gocal v0.9.1
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/fsnotify/fsnotify v1.10.1
-	github.com/gin-contrib/zap v1.1.7
+	github.com/gin-contrib/zap v1.1.8
 	github.com/gin-gonic/gin v1.12.0
 	github.com/mcuadros/go-gin-prometheus v0.1.0
 	github.com/sierrasoftworks/humane-errors-go v0.0.0-20260428132744-178d2d0aad2c

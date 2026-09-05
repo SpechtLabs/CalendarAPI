@@ -84,6 +84,8 @@ github.com/gin-contrib/zap v1.1.6 h1:TZcXi1UR8QG6OO4rewIMth7SmweyZuCeuUyJohpRcXg
 github.com/gin-contrib/zap v1.1.6/go.mod h1:V/sSE4Rf6ptzsEW4vj1KpUUV8ptJSVdE1nqsX9HQ1II=
 github.com/gin-contrib/zap v1.1.7 h1:eORVNAKR5lT9irhF9yD7VCBgwrLv6+5zJjMfXryDBfo=
 github.com/gin-contrib/zap v1.1.7/go.mod h1:bCR836S2tW8qYbisz97Sbw1C9UjDKbaUh30cS3cLPkw=
+github.com/gin-contrib/zap v1.1.8 h1:1OUgZj9IcEDUhwSwAermS0qesCL3UDcqB/jVYyUM/H0=
+github.com/gin-contrib/zap v1.1.8/go.mod h1:2RXm6SHx42zoxXo337YAcADYadyjPKjtPvPxgca0B/s=
 github.com/gin-gonic/gin v1.10.1 h1:T0ujvqyCSqRopADpgPgiTT63DUQVSfojyME59Ei63pQ=
 github.com/gin-gonic/gin v1.10.1/go.mod h1:4PMNQiOhvDRa013RKVbsiNwoyezlm2rm0uX/T7kzp5Y=
 github.com/gin-gonic/gin v1.11.0 h1:OW/6PLjyusp2PPXtyxKHU0RbX6I/l28FTdDlae5ueWk=
