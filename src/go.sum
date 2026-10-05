@@ -6,6 +6,8 @@ github.com/aws/smithy-go v1.22.5 h1:P9ATCXPMb2mPjYBgueqJNCA5S9UfktsW0tTxi+a7eqw=
 github.com/aws/smithy-go v1.22.5/go.mod h1:t1ufH5HMublsJYulve2RKmHDC15xu1f26kHCp/HgceI=
 github.com/aws/smithy-go v1.27.2 h1:y9NPmSE6am6LjEFPfqHqG/jJk7AauQvhCJONKh7kpzk=
 github.com/aws/smithy-go v1.27.2/go.mod h1:YE2RhdIuDbA5E5bTdciG9KrW3+TiEONeUWCqxX9i1Fc=
+github.com/aws/smithy-go v1.28.2 h1:myhcykQcatTul2B/zITjDk203G7t0awUAs1hVry5Bvg=
+github.com/aws/smithy-go v1.28.2/go.mod h1:YE2RhdIuDbA5E5bTdciG9KrW3+TiEONeUWCqxX9i1Fc=
 github.com/aymanbagabas/go-osc52/v2 v2.0.1 h1:HwpRHbFMcZLEVr42D4p7XBqjyuxQH5SMiErDT4WkJ2k=
 github.com/aymanbagabas/go-osc52/v2 v2.0.1/go.mod h1:uYgXzlJ7ZpABp8OJ+exZzJJhRNQ2ASbcXHWsFqH8hp8=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
@@ -247,6 +249,8 @@ github.com/sierrasoftworks/humane-errors-go v0.0.0-20250904141959-2224f06cddb4 h
 github.com/sierrasoftworks/humane-errors-go v0.0.0-20250904141959-2224f06cddb4/go.mod h1:p4jbkjZuTzb8snmKhhMJJwPjAwO5fh8UZ2Gkstwt71k=
 github.com/sierrasoftworks/humane-errors-go v0.0.0-20260428132744-178d2d0aad2c h1:TlFCGManXBbR+EBc2Nxe/NwnUDoUzBRCaArLrmYJM5A=
 github.com/sierrasoftworks/humane-errors-go v0.0.0-20260428132744-178d2d0aad2c/go.mod h1:98WJMvl0Bvx/4pvShkeT0281OIJX6u6t1khQnMXjctg=
+github.com/sierrasoftworks/humane-errors-go v0.0.0-20260820132314-9a466da5e0f0 h1:9cNxq4nJv4SlCe5+O1USeJIOn5bhp06gdI1CcDiOT6U=
+github.com/sierrasoftworks/humane-errors-go v0.0.0-20260820132314-9a466da5e0f0/go.mod h1:fQ1yre9kStQHEGqICzKYn1NHgnYeo8sNSf1Q0KNgaSA=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 h1:+jumHNA0Wrelhe64i8F6HNlS8pkoyMv5sreGx2Ry5Rw=
@@ -259,6 +263,8 @@ github.com/spechtlabs/go-otel-utils/otelprovider v0.1.1 h1:tvhHVB0i8FlCkooaLe8rl
 github.com/spechtlabs/go-otel-utils/otelprovider v0.1.1/go.mod h1:aujvZM+igVSzkq7F0SpRvfiH6CEooXrFOPdrQ/9JTgc=
 github.com/spechtlabs/go-otel-utils/otelprovider v0.2.0 h1:ez9CU5ucoyWR1VunEphZweYhrnhXAfNEpaZCZvsjyd0=
 github.com/spechtlabs/go-otel-utils/otelprovider v0.2.0/go.mod h1:aujvZM+igVSzkq7F0SpRvfiH6CEooXrFOPdrQ/9JTgc=
+github.com/spechtlabs/go-otel-utils/otelprovider v0.2.2 h1:goXBmqt4wdSCqaQzJSY+Tvk6ZZQa/NRyYKNAfckZvlQ=
+github.com/spechtlabs/go-otel-utils/otelprovider v0.2.2/go.mod h1:QG5Vm6hZIqwp1pDBfQiXHSiNP2kZDJRRGS4pLWHCGBQ=
 github.com/spechtlabs/go-otel-utils/otelzap v0.0.13 h1:eKrf3Jd4WurABA+iw4TAZJRF2/Ke1cIzsX1wSUOZZT0=
 github.com/spechtlabs/go-otel-utils/otelzap v0.0.13/go.mod h1:Bk/uRNkU1/MsMc2J1NUxF+0lRNDbUUIulioJevLYM74=
 github.com/spechtlabs/go-otel-utils/otelzap v0.0.15 h1:LPo3vmPRVTQDG/ic2r4q1t9irptnffRRTEpaLYjbguo=
@@ -267,6 +273,8 @@ github.com/spechtlabs/go-otel-utils/otelzap v0.1.1 h1:r1BvyHP+IIKWGQaztgKg/Rvcmr
 github.com/spechtlabs/go-otel-utils/otelzap v0.1.1/go.mod h1:wC19xTMM6RWAE6m+akPbBWGDCDYUHzcfz9ey+JJzW5E=
 github.com/spechtlabs/go-otel-utils/otelzap v0.2.0 h1:AgW/At0GH8klQgsPzEWmk+qvSrKTyeIlb/u4wC1OJZ0=
 github.com/spechtlabs/go-otel-utils/otelzap v0.2.0/go.mod h1:MV5u+BkQun/Ej43FG8W1KDgivh8HAzf4eQBfyfhiR98=
+github.com/spechtlabs/go-otel-utils/otelzap v0.2.2 h1:OxIGhyhT4ZMalMUZ14UJEaddb+cSUhIhW9QryqORUhU=
+github.com/spechtlabs/go-otel-utils/otelzap v0.2.2/go.mod h1:1w/yHz/FpA0Cq8ZeoRObT3SxvQ2qWHBa4KbYRdu4zqI=
 github.com/spf13/afero v1.14.0 h1:9tH6MapGnn/j0eb0yIXiLjERO8RB6xIVZRDCX7PtqWA=
 github.com/spf13/afero v1.14.0/go.mod h1:acJQ8t0ohCGuMN3O+Pv0V0hgMxNYDlvdk+VTfyZmbYo=
 github.com/spf13/afero v1.15.0 h1:b/YBCLWAJdFWJTN9cLhiXXcD7mzKn9Dm86dNnfyQw1I=
