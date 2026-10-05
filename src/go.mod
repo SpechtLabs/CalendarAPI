@@ -9,9 +9,9 @@ require (
 	github.com/gin-contrib/zap v1.1.9
 	github.com/gin-gonic/gin v1.12.0
 	github.com/mcuadros/go-gin-prometheus v0.1.0
-	github.com/sierrasoftworks/humane-errors-go v0.0.0-20260428132744-178d2d0aad2c
-	github.com/spechtlabs/go-otel-utils/otelprovider v0.2.0
-	github.com/spechtlabs/go-otel-utils/otelzap v0.2.0
+	github.com/sierrasoftworks/humane-errors-go v0.0.0-20260820132314-9a466da5e0f0
+	github.com/spechtlabs/go-otel-utils/otelprovider v0.2.2
+	github.com/spechtlabs/go-otel-utils/otelzap v0.2.2
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.72.0
@@ -26,7 +26,7 @@ require (
 
 require (
 	github.com/ChannelMeter/iso8601duration v0.0.0-20150204201828-8da3af7a2a61 // indirect
-	github.com/aws/smithy-go v1.27.2 // indirect
+	github.com/aws/smithy-go v1.28.2 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bytedance/gopkg v0.1.4 // indirect
