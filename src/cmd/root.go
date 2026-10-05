@@ -2,12 +2,14 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sierrasoftworks/humane-errors-go"
 	"github.com/spechtlabs/go-otel-utils/otelprovider"
 	"github.com/spechtlabs/go-otel-utils/otelzap"
 	"github.com/spf13/cobra"
@@ -16,13 +18,13 @@ import (
 )
 
 var (
-	// Version represents the Version of the kkpctl binary, should be set via ldflags -X
+	// Version represents the Version of the calendarapi binary, should be set via ldflags -X
 	Version string
 
-	// Date represents the Date of when the kkpctl binary was build, should be set via ldflags -X
+	// Date represents the Date of when the calendarapi binary was build, should be set via ldflags -X
 	Date string
 
-	// Commit represents the Commit-hash from which kkpctl binary was build, should be set via ldflags -X
+	// Commit represents the Commit-hash from which calendarapi binary was build, should be set via ldflags -X
 	Commit string
 
 	// BuiltBy represents who build the binary, should be set via ldflags -X
@@ -36,46 +38,94 @@ var (
 	debug                  bool
 )
 
-func init() {
-	cobra.OnInitialize(initConfig)
+var undoFunc func()
 
+// rootCmd represents the base command when called without any subcommands
+var rootCmd = &cobra.Command{
+	Use:   "meetingepd",
+	Short: "A CLI for interacting with the meetingroom epd dipslay server.",
+	Long:  `This is a CLI for interacting with the meetingroom epd display server`,
+	// Execute prints the error, with its advice, itself.
+	SilenceErrors: true,
+	SilenceUsage:  true,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if err := initConfig(); err != nil {
+			return err
+		}
+		undoFunc = initO11y()
+		return nil
+	},
+	PersistentPostRun: func(cmd *cobra.Command, args []string) {
+		undoFunc()
+	},
+}
+
+// Execute builds the command tree and runs it. main calls it once.
+func Execute(version, commit, date, builtBy string) {
+	// assign build flags for version info
+	Version = version
+	Date = date
+	Commit = commit
+	BuiltBy = builtBy
+
+	if err := addRootFlags(); err != nil {
+		humane.Eprint(err)
+		os.Exit(1)
+	}
+
+	addVerbCommands()
+	addCalendarCommands()
+	addCustomStatusCommands()
+	addServeCommand()
+	addVersionCommand()
+
+	if err := rootCmd.ExecuteContext(context.Background()); err != nil {
+		humane.Eprint(err)
+		os.Exit(1)
+	}
+}
+
+func addRootFlags() error {
 	rootCmd.PersistentFlags().StringVarP(&configFileName, "config", "c", "", "Name of the config file")
 
 	rootCmd.PersistentFlags().BoolP("debug", "d", false, "enable debug logging")
 	viper.SetDefault("server.debug", false)
-	err := viper.BindPFlag("server.debug", rootCmd.PersistentFlags().Lookup("debug"))
-	if err != nil {
-		panic(fmt.Errorf("fatal binding flag: %w", err))
-	}
 
-	rootCmd.PersistentFlags().IntVar(&restPort, "restPort", 50051, "Port of the gRPC API of the Server")
+	rootCmd.PersistentFlags().IntVar(&restPort, "restPort", 8099, "Port of the REST API of the Server")
 	viper.SetDefault("server.httpPort", 8099)
-	err = viper.BindPFlag("server.httpPort", rootCmd.PersistentFlags().Lookup("restPort"))
-	if err != nil {
-		panic(fmt.Errorf("fatal binding flag: %w", err))
-	}
 
 	rootCmd.PersistentFlags().IntVar(&grpcPort, "grpcPort", 50051, "Port of the gRPC API of the Server")
 	viper.SetDefault("server.grpcPort", 50051)
-	err = viper.BindPFlag("server.grpcPort", rootCmd.PersistentFlags().Lookup("grpcPort"))
-	if err != nil {
-		panic(fmt.Errorf("fatal binding flag: %w", err))
-	}
 
-	rootCmd.PersistentFlags().StringVarP(&hostname, "server", "s", "", "Port of the gRPC API of the Server")
+	rootCmd.PersistentFlags().StringVarP(&hostname, "server", "s", "", "Host name or address of the Server")
 	viper.SetDefault("server.host", "")
-	err = viper.BindPFlag("server.host", rootCmd.PersistentFlags().Lookup("server"))
-	if err != nil {
-		panic(fmt.Errorf("fatal binding flag: %w", err))
-	}
+
+	return errors.Join(
+		bindFlag("server.debug", "debug"),
+		bindFlag("server.httpPort", "restPort"),
+		bindFlag("server.grpcPort", "grpcPort"),
+		bindFlag("server.host", "server"),
+	)
 }
 
-func initConfig() {
+func bindFlag(key, flag string) error {
+	if err := viper.BindPFlag(key, rootCmd.PersistentFlags().Lookup(flag)); err != nil {
+		return humane.Wrap(err, fmt.Sprintf("failed to bind the --%s flag to %s", flag, key),
+			"this is a bug in calendarapi; please report it")
+	}
+
+	return nil
+}
+
+func initConfig() humane.Error {
 	if configFileName != "" {
 		viper.SetConfigFile(configFileName)
 	} else {
 		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
+		if err != nil {
+			return humane.Wrap(err, "failed to find the home directory to look for config.yaml in",
+				"pass the config file with --config")
+		}
 
 		viper.SetConfigName("config")
 		viper.SetConfigType("yaml")
@@ -90,14 +140,16 @@ func initConfig() {
 
 	// Find and read the config file
 	if err := viper.ReadInConfig(); err != nil {
-		// Handle errors reading the config file
-		panic(fmt.Errorf("fatal error config file: %w", err))
+		return humane.Wrap(err, "failed to read the config file",
+			"pass the config file with --config, or put config.yaml in the working directory, the home directory, ~/.config/calendarapi/ or /data")
 	}
 
 	hostname = viper.GetString("server.host")
 	grpcPort = viper.GetInt("server.grpcPort")
 	restPort = viper.GetInt("server.httpPort")
 	debug = viper.GetBool("server.debug")
+
+	return nil
 }
 
 func initO11y() func() {
@@ -124,7 +176,6 @@ func initO11y() func() {
 	traceProvider := otelprovider.NewTracer(tracerOptions...)
 
 	// Initialize Logging
-	debug := viper.GetBool("server.debug")
 	var zapLogger *zap.Logger
 	var err error
 	if debug {
@@ -159,55 +210,23 @@ func initO11y() func() {
 	undoOtelZapGlobals := otelzap.ReplaceGlobals(otelZapLogger)
 
 	return func() {
-		if err := traceProvider.ForceFlush(context.Background()); err != nil {
-			otelzap.L().Warn("failed to flush traces")
-		}
+		ctx := context.Background()
 
-		if err := logProvider.ForceFlush(context.Background()); err != nil {
-			otelzap.L().Warn("failed to flush logs")
-		}
-
-		if err := traceProvider.Shutdown(context.Background()); err != nil {
-			panic(err)
-		}
-
-		if err := logProvider.Shutdown(context.Background()); err != nil {
-			panic(err)
+		// Telemetry that didn't make it out is lost either way, and the
+		// logger exports through the providers that just failed, so this goes
+		// to stderr.
+		err := errors.Join(
+			traceProvider.ForceFlush(ctx),
+			logProvider.ForceFlush(ctx),
+			traceProvider.Shutdown(ctx),
+			logProvider.Shutdown(ctx),
+		)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to flush and shut down the telemetry providers for %q: %v\n", otelEndpoint, err)
 		}
 
 		undoStdLogRedirect()
 		undoOtelZapGlobals()
 		undoZapGlobals()
-	}
-}
-
-var undoFunc func()
-
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:   "meetingepd",
-	Short: "A CLI for interacting with the meetingroom epd dipslay server.",
-	Long:  `This is a CLI for interacting with the meetingroom epd display server`,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		undoFunc = initO11y()
-	},
-	PersistentPostRun: func(cmd *cobra.Command, args []string) {
-		undoFunc()
-	},
-}
-
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute(version, commit, date, builtBy string) {
-	// asign build flags for version info
-	Version = version
-	Date = date
-	Commit = commit
-	BuiltBy = builtBy
-
-	err := rootCmd.Execute()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
 	}
 }

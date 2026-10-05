@@ -4,16 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
-	"github.com/SpechtLabs/CalendarAPI/pkg/api"
-	pb "github.com/SpechtLabs/CalendarAPI/pkg/protos"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/spechtlabs/go-otel-utils/otelzap"
+	"github.com/sierrasoftworks/humane-errors-go"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
-	"google.golang.org/grpc"
 	"gopkg.in/yaml.v3"
+
+	"github.com/SpechtLabs/CalendarAPI/pkg/client"
+	pb "github.com/SpechtLabs/CalendarAPI/pkg/protos"
 )
 
 var outFormat string
@@ -23,27 +23,17 @@ var clearCalendarCmd = &cobra.Command{
 	Example: "meetingepd clear calendar",
 	Long:    "Clear the cache of the server and force it to fetch the latest info from the iCal",
 	Args:    cobra.ExactArgs(0),
-	Run: func(cmd *cobra.Command, args []string) {
-		addr := fmt.Sprintf("%s:%d", hostname, grpcPort)
-
-		conn, client := api.NewGrpcApiClient(addr)
-		defer func(conn *grpc.ClientConn) {
-			err := conn.Close()
-			if err != nil {
-				otelzap.L().Sugar().Errorw("failed to close gRPC connection", zap.Error(err))
-			}
-		}(conn)
-
-		// Contact the server
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		_, err := client.RefreshCalendar(ctx, &pb.CalendarRequest{CalendarName: "all"})
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := withCalendarAPI(cmd.Context(), 10*time.Second, func(ctx context.Context, api pb.CalenderServiceClient) error {
+			_, err := api.RefreshCalendar(ctx, &pb.CalendarRequest{CalendarName: client.AllCalendars})
+			return err
+		})
 		if err != nil {
-			otelzap.L().Fatal(fmt.Sprintf("Failed to talk to gRPC API (%s) %v", addr, err))
+			return err
 		}
 
 		fmt.Print("Cleared calendar cache\n")
+		return nil
 	},
 }
 
@@ -51,75 +41,93 @@ var getCalendarCmd = &cobra.Command{
 	Use:     "calendar [calendar_name]",
 	Example: "meetingepd get calendar",
 	Args:    cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		calendarName := "all"
+	RunE: func(cmd *cobra.Command, args []string) error {
+		calendarName := client.AllCalendars
 		if len(args) == 1 {
 			calendarName = args[0]
 		}
 
-		addr := fmt.Sprintf("%s:%d", hostname, grpcPort)
-
-		conn, client := api.NewGrpcApiClient(addr)
-		defer func(conn *grpc.ClientConn) {
-			err := conn.Close()
-			if err != nil {
-				otelzap.L().Sugar().Errorw("failed to close gRPC connection", zap.Error(err))
-			}
-		}(conn)
-
-		// Contact the server
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-
-		calendar, err := client.GetCalendar(ctx, &pb.CalendarRequest{CalendarName: calendarName})
+		var calendar *pb.CalendarResponse
+		err := withCalendarAPI(cmd.Context(), time.Second, func(ctx context.Context, api pb.CalenderServiceClient) error {
+			var err error
+			calendar, err = api.GetCalendar(ctx, &pb.CalendarRequest{CalendarName: calendarName})
+			return err
+		})
 		if err != nil {
-			otelzap.L().Fatal(fmt.Sprintf("Failed to talk to gRPC API (%s) %v", addr, err))
+			return err
 		}
 
-		switch outFormat {
-		case "json":
-			json, err := json.Marshal(calendar)
-			if err != nil {
-				otelzap.L().Sugar().Error("failed to parse calendar config", zap.Error(err))
-			}
-			fmt.Println(string(json))
-
-		case "yaml":
-			yaml, err := yaml.Marshal(calendar)
-			if err != nil {
-				otelzap.L().Sugar().Error("failed to parse calendar config", zap.Error(err))
-			}
-			fmt.Println(string(yaml))
-
-		default:
-			fmt.Println(formatText(calendar))
+		out, err := renderCalendar(calendar, outFormat, time.Now())
+		if err != nil {
+			return err
 		}
+
+		fmt.Println(out)
+		return nil
 	},
 }
 
-func formatText(resp *pb.CalendarResponse) string {
-	now := time.Now()
+// textStyles are the styles of the text output of `get calendar`.
+type textStyles struct {
+	header, context, important, free, tentative, outOfOffice, normal, past lipgloss.Style
+}
 
-	// Styles
-	headerStyle := lipgloss.NewStyle().Bold(true).Underline(true)
-	contextStyle := lipgloss.NewStyle().Italic(true).Foreground(lipgloss.Color("#999999"))
-	importantStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000")).Bold(true)
-	freeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#999999"))
-	tentativeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500")).Italic(true)
-	outOfOfficeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#800080")).Bold(true)
-	defaultStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF"))
-	strikeThroughStyle := lipgloss.NewStyle().Strikethrough(true).Foreground(lipgloss.Color("#666666"))
+func addCalendarCommands() {
+	getCalendarCmd.Flags().StringVarP(&outFormat, "out", "o", "text", "Configure your output format (text, json, yaml)")
 
-	outStr := ""
-	outStr += contextStyle.Render(fmt.Sprintf("(last refreshed: %s)", time.Unix(resp.LastUpdated, 0).Format(time.TimeOnly)))
-	outStr += "\n\n"
+	clearCmd.AddCommand(clearCalendarCmd)
+	getCmd.AddCommand(getCalendarCmd)
+}
 
-	outStr += fmt.Sprintf("Calendar: %s Date: %s",
-		headerStyle.Render(resp.CalendarName),
-		headerStyle.Render(time.Unix(resp.LastUpdated, 0).Format(time.DateOnly)),
+// renderCalendar renders the calendar as JSON, YAML, or text for a terminal.
+// The text marks the events that ended before now as past.
+func renderCalendar(calendar *pb.CalendarResponse, format string, now time.Time) (string, humane.Error) {
+	switch format {
+	case "json":
+		out, err := json.Marshal(calendar)
+		if err != nil {
+			return "", humane.Wrap(err, "failed to render the calendar as JSON", "use --out text or --out yaml instead")
+		}
+		return string(out), nil
+
+	case "yaml":
+		out, err := yaml.Marshal(calendar)
+		if err != nil {
+			return "", humane.Wrap(err, "failed to render the calendar as YAML", "use --out text or --out json instead")
+		}
+		return string(out), nil
+
+	default:
+		return formatText(calendar, now), nil
+	}
+}
+
+func newTextStyles() textStyles {
+	return textStyles{
+		header:      lipgloss.NewStyle().Bold(true).Underline(true),
+		context:     lipgloss.NewStyle().Italic(true).Foreground(lipgloss.Color("#999999")),
+		important:   lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000")).Bold(true),
+		free:        lipgloss.NewStyle().Foreground(lipgloss.Color("#999999")),
+		tentative:   lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500")).Italic(true),
+		outOfOffice: lipgloss.NewStyle().Foreground(lipgloss.Color("#800080")).Bold(true),
+		normal:      lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF")),
+		past:        lipgloss.NewStyle().Strikethrough(true).Foreground(lipgloss.Color("#666666")),
+	}
+}
+
+func formatText(resp *pb.CalendarResponse, now time.Time) string {
+	styles := newTextStyles()
+
+	var out strings.Builder
+	out.WriteString(styles.context.Render(fmt.Sprintf("(last refreshed: %s)", time.Unix(resp.LastUpdated, 0).Format(time.TimeOnly))))
+	out.WriteString("\n\n")
+
+	fmt.Fprintf(&out, "Calendar: %s Date: %s",
+		styles.header.Render(resp.CalendarName),
+		styles.header.Render(time.Unix(resp.LastUpdated, 0).Format(time.DateOnly)),
 	)
 
-	outStr += "\n"
+	out.WriteString("\n")
 
 	// Separate all-day from timed events
 	allDayEntries := []*pb.CalendarEntry{}
@@ -136,33 +144,19 @@ func formatText(resp *pb.CalendarResponse) string {
 		}
 	}
 
-	idx := 1
-	// Show all-day first
-	for _, item := range allDayEntries {
-		outStr += renderEntry(item, idx, now, showCalendarName, strikeThroughStyle, importantStyle,
-			freeStyle, tentativeStyle, outOfOfficeStyle, defaultStyle, contextStyle)
-		idx++
+	// Show all-day first, then timed events
+	for idx, item := range append(allDayEntries, normalEntries...) {
+		out.WriteString(renderEntry(item, idx+1, now, showCalendarName, styles))
 	}
 
-	// Then timed events
-	for _, item := range normalEntries {
-		outStr += renderEntry(item, idx, now, showCalendarName, strikeThroughStyle, importantStyle,
-			freeStyle, tentativeStyle, outOfOfficeStyle, defaultStyle, contextStyle)
-		idx++
-	}
-
-	return outStr
+	return out.String()
 }
 
-func renderEntry(
-	item *pb.CalendarEntry,
-	idx int,
-	now time.Time,
-	showCalendarName bool,
-	strikeThroughStyle, importantStyle, freeStyle,
-	tentativeStyle, outOfOfficeStyle, defaultStyle,
-	contextStyle lipgloss.Style,
-) string {
+func renderEntry(item *pb.CalendarEntry, idx int, now time.Time, showCalendarName bool, styles textStyles) string {
+	if item == nil {
+		return ""
+	}
+
 	start := time.Unix(item.Start, 0)
 	end := time.Unix(item.End, 0)
 
@@ -194,33 +188,26 @@ func renderEntry(
 
 	// Past event? Strike through
 	if end.Before(now) {
-		return strikeThroughStyle.Render(line) + strikeThroughStyle.Italic(true).Render(fmt.Sprintf(" (%s)", item.CalendarName)) + "\n"
+		return styles.past.Render(line) + styles.past.Italic(true).Render(fmt.Sprintf(" (%s)", item.CalendarName)) + "\n"
 	}
 
 	// Apply styles based on attributes
 	switch {
 	case item.Important:
-		line = importantStyle.Render(line)
+		line = styles.important.Render(line)
 	case item.Busy == pb.BusyState_Free:
-		line = freeStyle.Render(line)
+		line = styles.free.Render(line)
 	case item.Busy == pb.BusyState_Tentative:
-		line = tentativeStyle.Render(line)
+		line = styles.tentative.Render(line)
 	case item.Busy == pb.BusyState_OutOfOffice || item.Busy == pb.BusyState_WorkingElsewhere:
-		line = outOfOfficeStyle.Render(line)
+		line = styles.outOfOffice.Render(line)
 	default:
-		line = defaultStyle.Render(line)
+		line = styles.normal.Render(line)
 	}
 
 	if showCalendarName {
-		line += contextStyle.Render(fmt.Sprintf(" (%s)", item.CalendarName))
+		line += styles.context.Render(fmt.Sprintf(" (%s)", item.CalendarName))
 	}
 
 	return line + "\n"
-}
-
-func init() {
-	getCalendarCmd.Flags().StringVarP(&outFormat, "out", "o", "text", "Configure your output format (text, json, yaml)")
-
-	clearCmd.AddCommand(clearCalendarCmd)
-	getCmd.AddCommand(getCalendarCmd)
 }

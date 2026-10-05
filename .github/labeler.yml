@@ -1,0 +1,86 @@
+# The REST and gRPC APIs
+api:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/pkg/api/**"
+
+# Loading the calendars, the rules and the cache
+calendars:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/pkg/client/**"
+
+# The protobuf schema and the code generated from it
+protos:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "protos/**"
+          - "src/pkg/protos/**"
+
+# CLI commands and entrypoint
+cli:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/cmd/**"
+          - "src/main.go"
+
+# Tests
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*_test.go"
+          - "**/testdata/**"
+
+# Documentation
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "**/*.md"
+
+# The docs site's build: VuePress config, theme and dependencies
+docs-site:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/.vuepress/**"
+          - "docs/package.json"
+          - "docs/bun.lock"
+
+# The container image
+docker:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "Dockerfile"
+          - ".dockerignore"
+
+# Build, release, and CI plumbing
+build:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+          - ".goreleaser.yaml"
+          - ".release-please-config.json"
+          - ".release-please-manifest.json"
+          - ".mise.toml"
+          - ".golangci.yaml"
+          - ".custom-gcl.yml"
+          - ".pre-commit-config.yaml"
+          - ".markdownlint-cli2.yaml"
+          - ".yamllint.yaml"
+          - ".editorconfig"
+          - "codecov.yml"
+          - "renovate.json"
+          - "src/go.mod"
+          - "src/go.sum"
+
+# Add 'enhancement' to any PR whose head branch starts with `feat` or `feature`
+enhancement:
+  - head-branch:
+      - "^feat"
+      - "^feature"
+
+# Add 'bug' to any PR whose head branch starts with `fix` or `bug`
+bug:
+  - head-branch:
+      - "^fix"
+      - "^bug"

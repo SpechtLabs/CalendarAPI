@@ -25,7 +25,7 @@ var clearCmd = &cobra.Command{
 	},
 }
 
-func init() {
+func addVerbCommands() {
 	rootCmd.AddCommand(clearCmd)
 	rootCmd.AddCommand(getCmd)
 	rootCmd.AddCommand(setCmd)

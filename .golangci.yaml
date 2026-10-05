@@ -1,0 +1,122 @@
+# golangci-lint configuration for CalendarAPI.
+#
+# golint-sl runs as a module plugin baked into ./custom-gcl (see .custom-gcl.yml).
+# The prebuilt golangci-lint cannot load the plugin, so run it with
+# `mise run lint`, which builds custom-gcl and runs it in src/.
+# https://golangci-lint.run/usage/configuration/
+
+version: "2"
+
+run:
+  timeout: 10m
+  tests: true
+  modules-download-mode: readonly
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+linters:
+  enable:
+    # Default linters
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+    # Additional recommended linters
+    - dogsled
+    - copyloopvar
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - goprintffuncname
+    - gosec
+    - misspell
+    - modernize
+    - nakedret
+    - nolintlint
+    - prealloc
+    - revive
+    - rowserrcheck
+    - whitespace
+    - unconvert
+    - unparam
+
+    # golint-sl: production-ready Go patterns (error handling, observability, safety)
+    # https://golint.specht-labs.de/
+    - golint-sl
+
+  settings:
+    errcheck:
+      check-type-assertions: false
+      check-blank: false
+    govet:
+      enable-all: true
+    misspell:
+      locale: US
+    revive:
+      rules:
+        - name: comment-spacings
+        - name: import-shadowing
+    custom:
+      golint-sl:
+        type: module
+        description: SpechtLabs Go linter collection for production-ready code
+        original-url: github.com/spechtlabs/golint-sl
+
+  exclusions:
+    generated: lax
+    rules:
+      # Hold test files to a lighter bar than production code.
+      - linters:
+          - gosec
+          - goconst
+          - golint-sl
+        path: _test\.go
+
+      - linters:
+          - govet
+        text: "^fieldalignment:"
+        path: _test\.go
+
+      # The gRPC methods implement the generated CalenderServiceServer
+      # interface, whose methods return error.
+      - linters:
+          - golint-sl
+        text: "^humaneerror:"
+        path: ^src/pkg/api/grpc_api\.go$
+
+      # cmd is the composition root, as main would be: it creates the client,
+      # the APIs and the gRPC connection the CLI commands use, and wires them
+      # together.
+      - linters:
+          - golint-sl
+        text: "^interfaceconsistency:"
+        path: ^src/cmd/
+
+      # These log once when the APIs start listening, when the config
+      # changes, and at startup with --debug. They run outside any request,
+      # so there is no trace, request or span to correlate with.
+      - linters:
+          - golint-sl
+        text: "^wideevents: (function has context.Context but doesn't use span attributes|wide event missing request context)"
+        path: ^src/(cmd/serve\.go|pkg/api/(grpc|rest)_api\.go)$
+
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

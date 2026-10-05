@@ -60,3 +60,12 @@ typings/
 dist
 **/node_modules
 src/main
+
+# Go: binaries `mise run build` writes, the golangci-lint binary with the
+# golint-sl plugin `mise run lint-build` writes, and test coverage
+bin/
+custom-gcl
+coverage.txt
+
+### Commit message check ###
+.github/commit-lint/node_modules/
