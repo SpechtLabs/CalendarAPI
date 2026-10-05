@@ -14,9 +14,9 @@ In Home Assistant:
 2. Click the **three-dot menu** (⋮) in the top-right corner and select **Repositories**.
 3. Add the following URL:
 
-```plaintext
-https://github.com/SpechtLabs/homeassistant-addons
-```
+   ```plaintext
+   https://github.com/SpechtLabs/homeassistant-addons
+   ```
 
 4. Click **Add**, then scroll down to find the **CalendarAPI** add-on.
 

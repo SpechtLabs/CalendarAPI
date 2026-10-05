@@ -1,0 +1,4 @@
+# The image builds from src/ alone.
+*
+!src/
+src/coverage.txt

@@ -5,19 +5,25 @@ import (
 	"strconv"
 	"strings"
 
-	pb "github.com/SpechtLabs/CalendarAPI/pkg/protos"
+	"github.com/sierrasoftworks/humane-errors-go"
 	"github.com/spechtlabs/go-otel-utils/otelzap"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+
+	pb "github.com/SpechtLabs/CalendarAPI/pkg/protos"
 )
 
+// Rule is one entry of the rules config. A rule matches an event of its
+// calendar (or of every calendar) whose Key field contains one of the
+// Contains strings, ignoring case, and then either skips the event or
+// relabels it with Message and Important.
 type Rule struct {
 	CalendarName string   `mapstructure:"calendar"`
 	Name         string   `mapstructure:"name"`
 	Key          string   `mapstructure:"key"`
+	Message      string   `mapstructure:"message"`
 	Contains     []string `mapstructure:"contains"`
 	Skip         bool     `mapstructure:"skip"`
-	Message      string   `mapstructure:"message"`
 	Important    bool     `mapstructure:"important"`
 }
 
@@ -26,12 +32,16 @@ type Rule struct {
 // and the second bool indicates if this is a skip rule and the pb.CalendarEntry
 // should be skipped
 func (r *Rule) Evaluate(e *pb.CalendarEntry) (bool, bool) {
+	if e == nil {
+		return false, false
+	}
+
 	var matchFieldValue string
 	var matchFieldContains string
 	match := false
 
 	// only evaluate our rule if the calendar matches
-	if r.CalendarName == "" || r.CalendarName == "*" || r.CalendarName == "all" || r.CalendarName == e.CalendarName {
+	if r.CalendarName == "" || r.CalendarName == "*" || r.CalendarName == AllCalendars || r.CalendarName == e.CalendarName {
 		switch r.Key {
 		case "title":
 			matchFieldValue = e.Title
@@ -95,12 +105,12 @@ func (r *Rule) Evaluate(e *pb.CalendarEntry) (bool, bool) {
 	return true, r.Skip
 }
 
-func parseRules() []Rule {
+func parseRules() ([]Rule, humane.Error) {
 	var rules []Rule
-	err := viper.UnmarshalKey("rules", &rules)
-	if err != nil {
-		otelzap.L().WithError(err).Error("Failed to parse rules")
-		return nil
+	if err := viper.UnmarshalKey("rules", &rules); err != nil {
+		return nil, humane.Wrap(err, "failed to parse the rules config",
+			"check the rules section of the config file against the documentation")
 	}
-	return rules
+
+	return rules, nil
 }

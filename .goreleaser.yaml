@@ -1,0 +1,95 @@
+version: 2
+
+project_name: CalendarAPI
+
+builds:
+  - id: calendarapi
+    # The Go module lives in src/.
+    dir: src
+    main: .
+    binary: calendarapi
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+    # Embeds the time zone database, so the zones the calendars name load on
+    # hosts and in images without one.
+    tags:
+      - timetzdata
+    ldflags:
+      - -s -w
+      - -X=main.version={{ .Version }}
+      - -X=main.commit={{ .Commit }}
+      - -X=main.date={{ .CommitDate }}
+      - -X=main.builtBy=goreleaser
+
+archives:
+  - id: calendarapi
+    ids:
+      - calendarapi
+    # The Home Assistant add-on (SpechtLabs/homeassistant-addons) downloads
+    # CalendarAPI_<version>_linux_<arch>.tar.gz and expects calendarapi at its
+    # root; keep both.
+    name_template: "CalendarAPI_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+# Publish to SpechtLabs/homebrew-tap using HOMEBREW_TAP_GITHUB_TOKEN, a
+# repository or organization Actions secret with Contents: read and write
+# access to the tap. The default GITHUB_TOKEN only has access to this repo.
+homebrew_casks:
+  - name: calendarapi
+    ids:
+      - calendarapi
+    repository:
+      owner: SpechtLabs
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Casks
+    homepage: "https://calendarapi.specht-labs.de/"
+    description: "Serves iCal calendars over gRPC and REST"
+    skip_upload: auto
+    commit_author:
+      name: goreleaser-bot
+      email: bot@specht-labs.de
+    # calendarapi is not Apple-notarized. Remove quarantine from the installed
+    # binary so Gatekeeper allows it to run, as with the other CLIs in the tap.
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/calendarapi"]
+          end
+
+# release-please writes the changelog and creates the GitHub release; GoReleaser
+# only attaches the artifacts to it.
+changelog:
+  disable: true
+
+# A keyless cosign signature over checksums.txt, as a Sigstore bundle, covers
+# every archive through its checksum. `artifacts: binary` would sign nothing:
+# it only matches binaries released on their own, and ours ship in archives.
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    args:
+      - sign-blob
+      - "--bundle=${signature}"
+      - "${artifact}"
+      - --yes
+    artifacts: checksum
+
+release:
+  github:
+    owner: SpechtLabs
+    name: CalendarAPI
+  mode: keep-existing

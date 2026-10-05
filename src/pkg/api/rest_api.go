@@ -1,7 +1,9 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,6 +12,7 @@ import (
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	ginprometheus "github.com/mcuadros/go-gin-prometheus"
+	"github.com/sierrasoftworks/humane-errors-go"
 	"github.com/spechtlabs/go-otel-utils/otelzap"
 	"github.com/spf13/viper"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
@@ -22,14 +25,31 @@ import (
 	pb "github.com/SpechtLabs/CalendarAPI/pkg/protos"
 )
 
+const (
+	// contentTypeProtobuf is the content type a request sets to get, or to
+	// send, protobuf instead of JSON.
+	contentTypeProtobuf = "application/protobuf"
+
+	// readHeaderTimeout bounds how long a client may take to send its
+	// request headers.
+	readHeaderTimeout = 10 * time.Second
+
+	// shutdownTimeout bounds how long requests in flight may take to finish
+	// once the server shuts down.
+	shutdownTimeout = 5 * time.Second
+)
+
+// RestApi serves the calendar service over HTTP, as JSON or protobuf.
 type RestApi struct {
-	client *client.ICalClient
-	srv    *http.Server
+	calendars *client.ICalClient
+	srv       *http.Server
 }
 
-func NewRestApiServer(client *client.ICalClient) *RestApi {
+// NewRestApiServer returns the REST API for the calendars, on the configured
+// host and HTTP port. ListenAndServe starts it.
+func NewRestApiServer(calendars *client.ICalClient) *RestApi {
 	e := &RestApi{
-		client: client,
+		calendars: calendars,
 	}
 
 	// Setup Gin router
@@ -71,36 +91,60 @@ func NewRestApiServer(client *client.ICalClient) *RestApi {
 
 	// configure the HTTP Server
 	e.srv = &http.Server{
-		Addr:    fmt.Sprintf("%s:%d", viper.GetString("server.host"), viper.GetInt("server.httpPort")),
-		Handler: router,
+		Addr:              fmt.Sprintf("%s:%d", viper.GetString("server.host"), viper.GetInt("server.httpPort")),
+		Handler:           router,
+		ReadHeaderTimeout: readHeaderTimeout,
 	}
 
 	return e
 }
 
-func (e *RestApi) ListenAndServe() error {
-	otelzap.L().Info(fmt.Sprintf("REST API Server listening at %s", e.srv.Addr))
-	return e.srv.ListenAndServe()
+// ListenAndServe serves the REST API until ctx is done, and then shuts down
+// gracefully: requests in flight get shutdownTimeout to finish.
+func (e *RestApi) ListenAndServe(ctx context.Context) humane.Error {
+	otelzap.Ctx(ctx).Info("REST API listening", zap.String("addr", e.srv.Addr))
+
+	stopped := make(chan struct{})
+	defer close(stopped)
+	go func() {
+		select {
+		case <-ctx.Done():
+			shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), shutdownTimeout)
+			defer cancel()
+			_ = e.srv.Shutdown(shutdownCtx)
+		case <-stopped:
+		}
+	}()
+
+	if err := e.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return humane.Wrap(err, fmt.Sprintf("the REST API failed to serve on %s", e.srv.Addr),
+			"check that server.host and server.httpPort name a free port on this host")
+	}
+
+	return nil
 }
 
+// RefreshCalendar reloads every calendar now.
 func (e *RestApi) RefreshCalendar(ct *gin.Context) {
-	e.client.FetchEvents(ct.Request.Context())
+	e.calendars.FetchEvents(ct.Request.Context())
 }
 
+// GetCalendar answers with today's events of the calendar the query names,
+// or of every calendar.
 func (e *RestApi) GetCalendar(ct *gin.Context) {
-	events := e.client.GetEvents(ct.Request.Context())
+	events := e.calendars.GetEvents(ct.Request.Context())
 
 	queryParams := ct.Request.URL.Query()
 
 	calendar := queryParams.Get("calendar")
 	if calendar == "" || calendar == "*" {
-		calendar = "all"
+		calendar = client.AllCalendars
 	}
 
 	events.CalendarName = calendar
 
 	// if a specific calendar is requested, we must filter the entries down to the desired calendars
-	if calendar != "all" {
+	if calendar != client.AllCalendars {
 		var responseEvents []*pb.CalendarEntry
 		for _, event := range events.Entries {
 			if event.CalendarName == calendar {
@@ -111,21 +155,23 @@ func (e *RestApi) GetCalendar(ct *gin.Context) {
 	}
 
 	switch ct.ContentType() {
-	case "application/protobuf":
+	case contentTypeProtobuf:
 		ct.ProtoBuf(http.StatusOK, events)
 	default:
 		ct.JSON(http.StatusOK, events)
 	}
 }
 
+// GetCurrentEvent answers with the event happening now in the calendar the
+// query names, or 410 Gone when there is none.
 func (e *RestApi) GetCurrentEvent(ct *gin.Context) {
 	queryParams := ct.Request.URL.Query()
 	calendar := queryParams.Get("calendar")
 	if calendar == "" || calendar == "*" {
-		calendar = "all"
+		calendar = client.AllCalendars
 	}
 
-	currentEvent := e.client.GetCurrentEvent(ct.Request.Context(), calendar)
+	currentEvent := e.calendars.GetCurrentEvent(ct.Request.Context(), calendar)
 
 	status := http.StatusOK
 	if currentEvent == nil {
@@ -133,23 +179,27 @@ func (e *RestApi) GetCurrentEvent(ct *gin.Context) {
 	}
 
 	switch ct.ContentType() {
-	case "application/protobuf":
+	case contentTypeProtobuf:
 		ct.ProtoBuf(status, currentEvent)
 	default:
 		ct.JSON(status, currentEvent)
 	}
 }
 
+// GetCustomStatus answers with the custom status of the calendar the query
+// names, or 410 Gone when none is set.
 func (e *RestApi) GetCustomStatus(ct *gin.Context) {
 	queryParams := ct.Request.URL.Query()
 	if !queryParams.Has("calendar") || queryParams.Get("calendar") == "" {
-		_ = ct.AbortWithError(http.StatusBadRequest, fmt.Errorf("missing 'calendar' parameter in query parameters: %v", queryParams.Encode()))
+		_ = ct.AbortWithError(http.StatusBadRequest, humane.New(
+			fmt.Sprintf("missing 'calendar' parameter in query parameters: %v", queryParams.Encode()),
+			"name the calendar in the query, e.g. /status?calendar=office"))
 		return
 	}
 
 	calendar := queryParams.Get("calendar")
 	getStatusReq := &pb.GetCustomStatusRequest{CalendarName: calendar}
-	customStatus := e.client.GetCustomStatus(ct.Request.Context(), getStatusReq)
+	customStatus := e.calendars.GetCustomStatus(ct.Request.Context(), getStatusReq)
 
 	status := http.StatusOK
 	if len(customStatus.Title) == 0 {
@@ -157,81 +207,58 @@ func (e *RestApi) GetCustomStatus(ct *gin.Context) {
 	}
 
 	switch ct.ContentType() {
-	case "application/protobuf":
+	case contentTypeProtobuf:
 		ct.ProtoBuf(status, customStatus)
 	default:
 		ct.JSON(status, customStatus)
 	}
 }
 
+// SetCustomStatus sets the custom status the request body describes.
 func (e *RestApi) SetCustomStatus(ct *gin.Context) {
-	var err error
-	var body []byte
 	var customStatusReq pb.SetCustomStatusRequest
-
-	switch ct.ContentType() {
-	case "application/protobuf":
-		body, err = io.ReadAll(ct.Request.Body)
-		if err != nil {
-			ct.ProtoBuf(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
-			return
-		}
-
-		if err = proto.Unmarshal(body, &customStatusReq); err != nil {
-			ct.ProtoBuf(http.StatusBadRequest, gin.H{"error": "Failed to parse request body"})
-			return
-		}
-
-	default:
-		body, err = io.ReadAll(ct.Request.Body)
-		if err != nil {
-			ct.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
-			return
-		}
-
-		if err = json.Unmarshal(body, &customStatusReq); err != nil {
-			ct.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse request body"})
-			return
-		}
+	if !readRequest(ct, &customStatusReq) {
+		return
 	}
 
-	e.client.SetCustomStatus(ct.Request.Context(), &customStatusReq)
+	e.calendars.SetCustomStatus(ct.Request.Context(), &customStatusReq)
 }
 
+// UnsetCustomStatus clears the custom status of the calendar the request
+// body names.
 func (e *RestApi) UnsetCustomStatus(ct *gin.Context) {
-	var err error
-	var body []byte
 	var customStatusReq pb.ClearCustomStatusRequest
-
-	switch ct.ContentType() {
-	case "application/protobuf":
-		body, err = io.ReadAll(ct.Request.Body)
-		if err != nil {
-			ct.ProtoBuf(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
-			return
-		}
-
-		if err = proto.Unmarshal(body, &customStatusReq); err != nil {
-			ct.ProtoBuf(http.StatusBadRequest, gin.H{"error": "Failed to parse request body"})
-			return
-		}
-
-	default:
-		body, err = io.ReadAll(ct.Request.Body)
-		if err != nil {
-			ct.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
-			return
-		}
-
-		if err = json.Unmarshal(body, &customStatusReq); err != nil {
-			ct.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse request body"})
-			return
-		}
+	if !readRequest(ct, &customStatusReq) {
+		return
 	}
 
-	e.client.SetCustomStatus(ct.Request.Context(), &pb.SetCustomStatusRequest{CalendarName: customStatusReq.CalendarName, Status: &pb.CustomStatus{}})
+	e.calendars.SetCustomStatus(ct.Request.Context(), &pb.SetCustomStatusRequest{CalendarName: customStatusReq.CalendarName, Status: &pb.CustomStatus{}})
 }
 
+// Addr returns the address the REST API listens on.
 func (e *RestApi) Addr() string {
 	return e.srv.Addr
+}
+
+// readRequest decodes the request body into msg, as protobuf when the request
+// says so and as JSON otherwise. When it can't, it answers 400 with the
+// reason as JSON, and returns false.
+func readRequest(ct *gin.Context, msg proto.Message) bool {
+	body, err := io.ReadAll(ct.Request.Body)
+	if err != nil {
+		ct.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+		return false
+	}
+
+	if ct.ContentType() == contentTypeProtobuf {
+		err = proto.Unmarshal(body, msg)
+	} else {
+		err = json.Unmarshal(body, msg)
+	}
+	if err != nil {
+		ct.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Failed to parse request body"})
+		return false
+	}
+
+	return true
 }

@@ -101,23 +101,26 @@ rules:
 
 ### Prerequisites
 
-- Go 1.24+
+- [mise](https://mise.jdx.dev/), which installs every other tool at the version `.mise.toml` pins
 - Docker (for building and running containers)
 
 ### Building
 
-To build the project, run:
+To build the project into `bin/calendarapi`, run:
 
 ```sh
-go build -o calendarapi main.go
+mise install
+mise run build
 ```
+
+`mise run check` runs every check CI runs: lint, tests and the GoReleaser config.
 
 ### Running
 
 To run the project, execute:
 
 ```sh
-./calendarapi
+./bin/calendarapi serve --config display.yaml
 ```
 
 ### Docker
@@ -125,16 +128,16 @@ To run the project, execute:
 To build and run the Docker container, use the following commands:
 
 ```sh
-docker build -t calendarapi .
-docker run -p 8080:8080 -p 50051:50051 calendarapi
+mise run image
+docker run -p 8099:8099 -p 50051:50051 calendarapi:dev
 ```
 
 ### Testing
 
-To run tests, use:
+To run the tests, with the race detector and coverage, use:
 
 ```sh
-go test ./...
+mise run test
 ```
 
 ## Contributing
@@ -143,6 +146,6 @@ Contributions are welcome! Please open an issue or submit a pull request.
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
 
 [HomeAssistant Add-On]: https://github.com/SpechtLabs/homeassistant-addons/tree/main/calendar_api
