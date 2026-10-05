@@ -44,6 +44,9 @@ jobs:
         with:
           name: docs
           path: docs/.vuepress/dist
+          # vuepress exits 0 when the theme config fails to load and writes
+          # no pages, so an empty dist has to fail here.
+          if-no-files-found: error
 
   deploy-gh-pages:
     runs-on: ubuntu-latest
