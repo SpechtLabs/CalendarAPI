@@ -152,9 +152,10 @@ func (e *ICalClient) FetchEvents(ctx context.Context) {
 
 	var wg sync.WaitGroup
 	for i, cal := range calendars {
+		slot := &loads[i]
 		wg.Go(func() {
 			events, err := e.loadEvents(ctx, cal, rules)
-			loads[i] = load{err: err, events: events}
+			*slot = load{err: err, events: events}
 		})
 	}
 	wg.Wait()
