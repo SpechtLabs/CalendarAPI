@@ -1,6 +1,5 @@
+import { docsKitPlugin } from '@spechtlabs/docs-kit';
 import { viteBundler } from '@vuepress/bundler-vite';
-import { registerComponentsPlugin } from '@vuepress/plugin-register-components';
-import { path } from '@vuepress/utils';
 import { defineUserConfig } from 'vuepress';
 import { plumeTheme } from 'vuepress-theme-plume';
 
@@ -19,8 +18,11 @@ export default defineUserConfig({
   shouldPrefetch: false,
 
   plugins: [
-    registerComponentsPlugin({
-      componentsDir: path.resolve(__dirname, './components'),
+    // The shared components (FileTree, the home page's Releases and
+    // Contributors sections) and the GitHub data they show, fetched at
+    // build time
+    docsKitPlugin({
+      github: { repos: ['SpechtLabs/CalendarAPI'] },
     }),
   ],
 

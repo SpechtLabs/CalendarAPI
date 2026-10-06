@@ -56,9 +56,9 @@ config:
         details: Lightweight Go binary runs on containers, Raspberry Pi, or any Linux host with minimal resources.
 
 
-  - type: VPReleasesCustom
+  - type: VPReleases
     repo: SpechtLabs/CalendarAPI
 
-  - type: VPContributorsCustom
+  - type: VPContributors
     repo: SpechtLabs/CalendarAPI
 ---
