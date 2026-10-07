@@ -10,8 +10,8 @@ require (
 	github.com/gin-gonic/gin v1.12.0
 	github.com/mcuadros/go-gin-prometheus v0.1.0
 	github.com/sierrasoftworks/humane-errors-go v0.0.0-20260820132314-9a466da5e0f0
-	github.com/spechtlabs/go-otel-utils/otelprovider v0.2.2
-	github.com/spechtlabs/go-otel-utils/otelzap v0.2.2
+	github.com/spechtlabs/go-otel-utils/otelprovider v0.2.3
+	github.com/spechtlabs/go-otel-utils/otelzap v0.2.3
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.72.0
