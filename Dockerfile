@@ -2,7 +2,7 @@
 # the target's, so a multi-platform build needs no emulation. Keep the golang
 # image in lockstep with the go pin in .mise.toml; Renovate bumps them
 # together.
-FROM --platform=$BUILDPLATFORM golang:1.27.1-alpine3.24 AS build
+FROM --platform=$BUILDPLATFORM golang:1.27.2-alpine3.24 AS build
 
 ARG TARGETOS
 ARG TARGETARCH
