@@ -43,7 +43,7 @@ pinact = "5.0.0"
 bun = "1.4.3"
 markdownlint-cli2 = "0.24.0"
 # markdownlint-cli2 is an npm package, which mise installs with this node.
-node = "24.22.0"
+node = "24.22.1"
 
 [tasks.build]
 description = "Build the calendarapi binary into bin/"
