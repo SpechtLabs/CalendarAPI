@@ -21,7 +21,7 @@ RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -tags tim
     -ldflags="-s -w -X=main.version=${VERSION} -X=main.commit=${COMMIT} -X=main.date=${DATE} -X=main.builtBy=docker" \
     -o /out/calendarapi .
 
-FROM alpine:3.24.2
+FROM alpine:3.24.3
 
 LABEL org.opencontainers.image.source="https://github.com/SpechtLabs/CalendarAPI"
 LABEL org.opencontainers.image.description="CalendarAPI is a service that parses iCal files and exposes their content via gRPC or a REST API."
